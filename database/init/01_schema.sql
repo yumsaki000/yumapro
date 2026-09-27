@@ -75,41 +75,73 @@ CREATE TABLE events (
     CONSTRAINT fk_events_created_by FOREIGN KEY (created_by) REFERENCES admins (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 参加者（持つ情報は最小限）
-CREATE TABLE participants (
+-- 顧客（1人1件。こくちーず・Googleフォーム等から来た人を名寄せしてまとめる）
+-- 持つ情報は最小限。項目を増やす前に docs/requirements.md の 6・8 を確認する
+CREATE TABLE customers (
     id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
     name            VARCHAR(100) NOT NULL,
-    email           VARCHAR(255) NULL,
-    phone           VARCHAR(30)  NULL,
+    name_kana       VARCHAR(100) NULL COMMENT 'フリガナ（名寄せと五十音順の並べ替え用）',
+    email           VARCHAR(255) NULL COMMENT '保存時に小文字・前後空白なしにそろえる（名寄せ用）',
+    phone           VARCHAR(30)  NULL COMMENT '保存時に数字だけにそろえる（名寄せ用）',
     line_name       VARCHAR(100) NULL COMMENT 'オープンチャットでの表示名',
+    note            TEXT         NULL COMMENT '運営メモ',
     access_token    VARCHAR(64)  NOT NULL COMMENT '個人専用URL用のランダム文字列',
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_participants_access_token (access_token)
+    UNIQUE KEY uq_customers_access_token (access_token),
+    KEY idx_customers_email (email),
+    KEY idx_customers_phone (phone),
+    KEY idx_customers_name_kana (name_kana)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 申込
+-- 取り込み履歴（CSVアップロード1回につき1行）
+CREATE TABLE import_batches (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    source          VARCHAR(20)  NOT NULL COMMENT 'kokuchpro / google_form / peatix / customer_list',
+    event_id        INT UNSIGNED NULL COMMENT '取り込み先の回（顧客リストの取り込みでは NULL）',
+    filename        VARCHAR(255) NULL,
+    total_rows      INT UNSIGNED NOT NULL DEFAULT 0,
+    created_rows    INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '新しく登録した件数',
+    updated_rows    INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '既存の申込を更新した件数',
+    skipped_rows    INT UNSIGNED NOT NULL DEFAULT 0,
+    imported_by     INT UNSIGNED NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_import_batches_event (event_id),
+    CONSTRAINT fk_import_batches_event FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE SET NULL,
+    CONSTRAINT fk_import_batches_admin FOREIGN KEY (imported_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 申込（回 × 顧客）
 CREATE TABLE registrations (
     id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
     event_id            INT UNSIGNED NOT NULL,
-    participant_id      INT UNSIGNED NOT NULL,
+    customer_id         INT UNSIGNED NOT NULL,
+    source              VARCHAR(20)  NOT NULL DEFAULT 'manual'
+                        COMMENT '申込元: kokuchpro / google_form / peatix / own_form / manual',
+    external_id         VARCHAR(100) NULL COMMENT '申込元での番号（同じCSVを再度取り込んでも重複させない）',
     status              ENUM('applied', 'waitlisted', 'cancelled') NOT NULL DEFAULT 'applied'
                         COMMENT '申込／キャンセル待ち／キャンセル',
     gender              ENUM('male', 'female') NULL COMMENT '男女別定員・料金の回だけ使う',
     fee                 INT UNSIGNED NULL COMMENT 'この人の参加費（申込時点の金額）',
     answers             JSON         NULL COMMENT '追加項目の回答（event_types.form_fields に対応）',
+    raw_data            JSON         NULL COMMENT '取り込んだ元データそのまま（列の対応を後から直せるように）',
     payment_method      VARCHAR(20)  NULL COMMENT 'cash / bank_transfer / paypay / peatix / other',
     prepaid_at          DATETIME     NULL COMMENT '前払いの入金を確認した日時',
-    applied_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    applied_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申込元での申込日時',
     cancelled_at        DATETIME     NULL,
+    import_batch_id     INT UNSIGNED NULL COMMENT 'CSVで取り込んだ場合の取り込み履歴',
     created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_registrations_event_participant (event_id, participant_id),
+    UNIQUE KEY uq_registrations_event_customer (event_id, customer_id),
+    UNIQUE KEY uq_registrations_external (event_id, source, external_id),
     KEY idx_registrations_event_status (event_id, status, applied_at),
+    KEY idx_registrations_customer (customer_id, applied_at),
     CONSTRAINT fk_registrations_event FOREIGN KEY (event_id) REFERENCES events (id),
-    CONSTRAINT fk_registrations_participant FOREIGN KEY (participant_id) REFERENCES participants (id)
+    CONSTRAINT fk_registrations_customer FOREIGN KEY (customer_id) REFERENCES customers (id),
+    CONSTRAINT fk_registrations_import_batch FOREIGN KEY (import_batch_id) REFERENCES import_batches (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 当日受付（1申込につき1行。到着と入金を同時に記録）
@@ -149,7 +181,7 @@ CREATE TABLE expenses (
 CREATE TABLE inquiries (
     id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
     event_id        INT UNSIGNED NULL,
-    participant_id  INT UNSIGNED NULL COMMENT '個人専用URLから来た場合',
+    customer_id     INT UNSIGNED NULL COMMENT '個人専用URLから来た場合',
     name            VARCHAR(100) NULL COMMENT '未申込の人から来た場合',
     contact         VARCHAR(255) NULL,
     body            TEXT         NOT NULL,
@@ -162,6 +194,6 @@ CREATE TABLE inquiries (
     PRIMARY KEY (id),
     KEY idx_inquiries_status (status, created_at),
     CONSTRAINT fk_inquiries_event FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE SET NULL,
-    CONSTRAINT fk_inquiries_participant FOREIGN KEY (participant_id) REFERENCES participants (id) ON DELETE SET NULL,
+    CONSTRAINT fk_inquiries_customer FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE SET NULL,
     CONSTRAINT fk_inquiries_admin FOREIGN KEY (replied_by) REFERENCES admins (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
