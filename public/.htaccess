@@ -1,0 +1,8 @@
+Options -Indexes
+
+RewriteEngine On
+
+# 実在するファイル（CSS・画像など）以外は index.php に渡す
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]

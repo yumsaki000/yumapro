@@ -1,0 +1,167 @@
+-- MINATOイベント管理アプリ テーブル定義（案）
+-- docs/requirements.md「5. データ構造（案）」をSQLにしたもの。
+-- 要件確定までは、このファイルを直接直してよい（ローカルは `make db-reset` で作り直し）。
+-- 本番に入れたあとの変更は database/migrations/ に差分SQLを追加する。
+
+SET NAMES utf8mb4;
+
+-- 管理画面のアカウント（個人ごとに発行。共有しない）
+CREATE TABLE admins (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    login_id        VARCHAR(64)  NOT NULL,
+    password_hash   VARCHAR(255) NOT NULL COMMENT 'password_hash() の結果',
+    display_name    VARCHAR(100) NOT NULL,
+    role            ENUM('owner', 'staff') NOT NULL DEFAULT 'staff' COMMENT 'owner: アカウント管理もできる',
+    is_active       TINYINT(1)   NOT NULL DEFAULT 1,
+    last_login_at   DATETIME     NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_admins_login_id (login_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- イベント形式（リトリート／女子会／自己啓発／合コン）
+CREATE TABLE event_types (
+    id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    code                VARCHAR(32)  NOT NULL COMMENT 'プログラムから参照する名前',
+    name                VARCHAR(100) NOT NULL,
+    payment_timing      ENUM('prepaid', 'onsite') NOT NULL COMMENT '既定の支払い: 前払い／当日払い',
+    form_fields         JSON         NOT NULL COMMENT '追加の申込項目の定義',
+    expense_items       JSON         NOT NULL COMMENT '経費項目の定義',
+    message_templates   JSON         NOT NULL COMMENT '案内文テンプレート（募集／リマインド／締切／お礼）',
+    sort_order          INT          NOT NULL DEFAULT 0,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_event_types_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 開催回
+CREATE TABLE events (
+    id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    event_type_id       INT UNSIGNED NOT NULL,
+    slug                VARCHAR(32)  NOT NULL COMMENT '公開ページURL用のランダム文字列（連番IDを見せない）',
+    title               VARCHAR(200) NOT NULL,
+    round_no            INT UNSIGNED NULL COMMENT '第n回',
+    starts_at           DATETIME     NOT NULL,
+    ends_at             DATETIME     NULL,
+    venue_name          VARCHAR(200) NULL,
+    venue_address       VARCHAR(255) NULL,
+    venue_url           VARCHAR(500) NULL,
+    capacity            INT UNSIGNED NULL COMMENT '定員（合計）。NULL は上限なし',
+    capacity_male       INT UNSIGNED NULL COMMENT '男女別定員（合コン用）',
+    capacity_female     INT UNSIGNED NULL,
+    fee                 INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '参加費（円）',
+    fee_male            INT UNSIGNED NULL COMMENT '男女別料金（合コン用）',
+    fee_female          INT UNSIGNED NULL,
+    payment_timing      ENUM('prepaid', 'onsite') NOT NULL,
+    apply_deadline      DATETIME     NULL COMMENT '申込締切',
+    cancel_deadline     DATETIME     NULL COMMENT 'キャンセル期限（自動計算して保存）',
+    cancel_policy       TEXT         NULL COMMENT 'キャンセル規定',
+    organizer_amount    INT          NOT NULL DEFAULT 0 COMMENT '主催分（円）。収支 = 集金 - 経費 - 主催分',
+    description         TEXT         NULL COMMENT '公開ページの説明文',
+    extra               JSON         NULL COMMENT '形式ごとの追加設定',
+    status              ENUM('draft', 'open', 'closed', 'done', 'cancelled') NOT NULL DEFAULT 'draft'
+                        COMMENT '下書き／募集中／締切／終了／中止',
+    copied_from_id      INT UNSIGNED NULL COMMENT '複製元の回',
+    created_by          INT UNSIGNED NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_events_slug (slug),
+    KEY idx_events_type_starts (event_type_id, starts_at),
+    CONSTRAINT fk_events_type FOREIGN KEY (event_type_id) REFERENCES event_types (id),
+    CONSTRAINT fk_events_copied_from FOREIGN KEY (copied_from_id) REFERENCES events (id) ON DELETE SET NULL,
+    CONSTRAINT fk_events_created_by FOREIGN KEY (created_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 参加者（持つ情報は最小限）
+CREATE TABLE participants (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name            VARCHAR(100) NOT NULL,
+    email           VARCHAR(255) NULL,
+    phone           VARCHAR(30)  NULL,
+    line_name       VARCHAR(100) NULL COMMENT 'オープンチャットでの表示名',
+    access_token    VARCHAR(64)  NOT NULL COMMENT '個人専用URL用のランダム文字列',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_participants_access_token (access_token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 申込
+CREATE TABLE registrations (
+    id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    event_id            INT UNSIGNED NOT NULL,
+    participant_id      INT UNSIGNED NOT NULL,
+    status              ENUM('applied', 'waitlisted', 'cancelled') NOT NULL DEFAULT 'applied'
+                        COMMENT '申込／キャンセル待ち／キャンセル',
+    gender              ENUM('male', 'female') NULL COMMENT '男女別定員・料金の回だけ使う',
+    fee                 INT UNSIGNED NULL COMMENT 'この人の参加費（申込時点の金額）',
+    answers             JSON         NULL COMMENT '追加項目の回答（event_types.form_fields に対応）',
+    payment_method      VARCHAR(20)  NULL COMMENT 'cash / bank_transfer / paypay / peatix / other',
+    prepaid_at          DATETIME     NULL COMMENT '前払いの入金を確認した日時',
+    applied_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cancelled_at        DATETIME     NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_registrations_event_participant (event_id, participant_id),
+    KEY idx_registrations_event_status (event_id, status, applied_at),
+    CONSTRAINT fk_registrations_event FOREIGN KEY (event_id) REFERENCES events (id),
+    CONSTRAINT fk_registrations_participant FOREIGN KEY (participant_id) REFERENCES participants (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 当日受付（1申込につき1行。到着と入金を同時に記録）
+CREATE TABLE checkins (
+    id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    registration_id     INT UNSIGNED NOT NULL,
+    arrived_at          DATETIME     NULL,
+    paid_amount         INT UNSIGNED NULL COMMENT '当日の入金額（円）',
+    payment_method      VARCHAR(20)  NULL,
+    checked_in_by       INT UNSIGNED NULL COMMENT '受付した担当者',
+    note                VARCHAR(255) NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_checkins_registration (registration_id),
+    CONSTRAINT fk_checkins_registration FOREIGN KEY (registration_id) REFERENCES registrations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_checkins_admin FOREIGN KEY (checked_in_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 経費（1回に複数項目）
+CREATE TABLE expenses (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    event_id        INT UNSIGNED NOT NULL,
+    item            VARCHAR(100) NOT NULL,
+    amount          INT          NOT NULL COMMENT '円',
+    memo            VARCHAR(255) NULL,
+    created_by      INT UNSIGNED NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_expenses_event (event_id),
+    CONSTRAINT fk_expenses_event FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
+    CONSTRAINT fk_expenses_admin FOREIGN KEY (created_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 問い合わせ
+CREATE TABLE inquiries (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    event_id        INT UNSIGNED NULL,
+    participant_id  INT UNSIGNED NULL COMMENT '個人専用URLから来た場合',
+    name            VARCHAR(100) NULL COMMENT '未申込の人から来た場合',
+    contact         VARCHAR(255) NULL,
+    body            TEXT         NOT NULL,
+    reply           TEXT         NULL,
+    status          ENUM('open', 'answered', 'closed') NOT NULL DEFAULT 'open' COMMENT '未対応／返信済み／完了',
+    replied_by      INT UNSIGNED NULL,
+    replied_at      DATETIME     NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_inquiries_status (status, created_at),
+    CONSTRAINT fk_inquiries_event FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE SET NULL,
+    CONSTRAINT fk_inquiries_participant FOREIGN KEY (participant_id) REFERENCES participants (id) ON DELETE SET NULL,
+    CONSTRAINT fk_inquiries_admin FOREIGN KEY (replied_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,2 +1,23 @@
-# yumapro
-test
+# MINATOイベント管理アプリ
+
+MINATO のイベントの告知・申込・当日受付・会計を少人数で回すための Web アプリ。
+
+- 要件・背景：[docs/requirements.md](docs/requirements.md)
+- Mac での開発環境づくり：[docs/setup-mac.md](docs/setup-mac.md)
+- Xserver への配置（案）：[docs/deploy-xserver.md](docs/deploy-xserver.md)
+
+## すぐ動かす
+
+Docker Desktop が起動している状態で：
+
+```sh
+make setup
+```
+
+- アプリ：<http://localhost:8080>
+- 動作確認：<http://localhost:8080/health>
+- phpMyAdmin：<http://localhost:8081>
+
+## 構成
+
+PHP 8.3（フレームワークなし）＋ MariaDB 10.5。本番は Xserver。詳しくは [CLAUDE.md](CLAUDE.md)。

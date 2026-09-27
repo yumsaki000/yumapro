@@ -1,0 +1,15 @@
+# 環境ごとの設定（パスワードを含む）
+.env
+
+# Composer を導入した場合
+/vendor/
+
+# アップロードファイル・ログ・キャッシュ
+/storage/*
+!/storage/.gitkeep
+
+# Mac / エディタ
+.DS_Store
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,43 @@
+/* スマホで使う前提（申込・当日受付）。幅の狭い画面から組む */
+:root {
+    --color-text: #1f2328;
+    --color-muted: #656d76;
+    --color-bg: #f6f7f9;
+    --color-card: #ffffff;
+    --color-border: #d8dee4;
+    --color-accent: #0b5cad;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    line-height: 1.7;
+    color: var(--color-text);
+    background: var(--color-bg);
+}
+
+a {
+    color: var(--color-accent);
+}
+
+.container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+.card {
+    padding: 24px;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+}
+
+.card h1 {
+    margin-top: 0;
+    font-size: 1.4rem;
+}

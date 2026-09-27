@@ -1,0 +1,54 @@
+# ローカル開発環境（Mac: Docker Desktop / OrbStack で動作）
+#   アプリ       http://localhost:8080
+#   phpMyAdmin   http://localhost:8081
+#   DB直接接続   127.0.0.1:3307（TablePlus などから）
+services:
+  app:
+    build: ./docker/php
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    # Xserver は MariaDB。サーバーパネルに表示されるバージョンに合わせる
+    image: mariadb:10.5
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      TZ: Asia/Tokyo
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+      # 初回起動時だけ database/init/*.sql を番号順に流す
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  phpmyadmin:
+    image: phpmyadmin:5
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${DB_USER}
+      PMA_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
