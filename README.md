@@ -4,6 +4,7 @@ MINATO のイベントの告知・申込・当日受付・会計を少人数で�
 
 - 要件・背景：[docs/requirements.md](docs/requirements.md)
 - 申込の取り込みと顧客台帳（案）：[docs/data-intake.md](docs/data-intake.md)
+- 今のイベント管理シートの分析：[docs/current-sheet-analysis.md](docs/current-sheet-analysis.md)
 - Mac での開発環境づくり：[docs/setup-mac.md](docs/setup-mac.md)
 - Xserver への配置（案）：[docs/deploy-xserver.md](docs/deploy-xserver.md)
 
