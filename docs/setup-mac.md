@@ -83,6 +83,14 @@ make setup
 | <http://localhost:8080/health> | `{"app":"ok","db":"ok"}` なら DB までつながっている |
 | <http://localhost:8081> | phpMyAdmin（テーブルの中身を見る・直す） |
 
+管理画面（<http://localhost:8080/admin>）に入るには、先にアカウントを作る：
+
+```sh
+make admin
+```
+
+ログインID・表示名・権限・パスワードを順に聞かれる。最初のアカウントは owner（アカウント管理もできる）になる。
+
 DBクライアント（TablePlus、Sequel Ace など）からつなぐ場合：
 ホスト `127.0.0.1`／ポート `3307`／ユーザー `minato`／パスワード `minato`／DB `minato_event`
 

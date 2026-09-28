@@ -20,6 +20,18 @@ CREATE TABLE admins (
     UNIQUE KEY uq_admins_login_id (login_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 管理画面のログイン試行（総当たり対策。一定回数失敗したら一時的に止める）
+CREATE TABLE admin_login_attempts (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    login_id        VARCHAR(64)  NOT NULL,
+    ip_address      VARCHAR(45)  NOT NULL,
+    succeeded       TINYINT(1)   NOT NULL,
+    attempted_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_admin_login_attempts_login (login_id, attempted_at),
+    KEY idx_admin_login_attempts_ip (ip_address, attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- イベント形式（リトリート／女子会／自己啓発／合コン）
 CREATE TABLE event_types (
     id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -75,7 +87,7 @@ CREATE TABLE events (
     CONSTRAINT fk_events_created_by FOREIGN KEY (created_by) REFERENCES admins (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 顧客（1人1件。こくちーず・Googleフォーム等から来た人を名寄せしてまとめる）
+-- 顧客（1人1件。掲示板の申込・手入力・今のスプレッドシートからの移行を名寄せしてまとめる）
 -- 持つ情報は最小限。項目を増やす前に docs/requirements.md の 6・8 を確認する
 CREATE TABLE customers (
     id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -83,15 +95,24 @@ CREATE TABLE customers (
     name_kana       VARCHAR(100) NULL COMMENT 'フリガナ（名寄せと五十音順の並べ替え用）',
     email           VARCHAR(255) NULL COMMENT '保存時に小文字・前後空白なしにそろえる（名寄せ用）',
     phone           VARCHAR(30)  NULL COMMENT '保存時に数字だけにそろえる（名寄せ用）',
+    sns_account     VARCHAR(100) NULL COMMENT 'タグ付け用SNSアカウント。@なし・小文字で保存（出禁チェックの照合にも使う）',
+    gender          ENUM('male', 'female') NULL COMMENT '男女比の把握、男女別定員・料金の回で使う',
     line_name       VARCHAR(100) NULL COMMENT 'オープンチャットでの表示名',
+    first_channel   VARCHAR(50)  NULL COMMENT '最初に来たきっかけ（集客媒体）',
+    mail_opt_in_at  DATETIME     NULL COMMENT '案内メールの受け取りに同意した日時（特定電子メール法のため記録）',
+    mail_opt_out_at DATETIME     NULL COMMENT '案内メールの配信を停止した日時',
     note            TEXT         NULL COMMENT '運営メモ',
     access_token    VARCHAR(64)  NOT NULL COMMENT '個人専用URL用のランダム文字列',
+    legacy_no       INT UNSIGNED NULL COMMENT '移行元（今のスプレッドシートの声掛けリスト）の番号',
+    legacy_data     JSON         NULL COMMENT '移行元の行をそのまま（使い道が決まっていない列も失わないため）',
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_customers_access_token (access_token),
+    UNIQUE KEY uq_customers_legacy_no (legacy_no),
     KEY idx_customers_email (email),
     KEY idx_customers_phone (phone),
+    KEY idx_customers_sns (sns_account),
     KEY idx_customers_name_kana (name_kana)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -123,7 +144,6 @@ CREATE TABLE registrations (
     external_id         VARCHAR(100) NULL COMMENT '申込元での番号（同じCSVを再度取り込んでも重複させない）',
     status              ENUM('applied', 'waitlisted', 'cancelled') NOT NULL DEFAULT 'applied'
                         COMMENT '申込／キャンセル待ち／キャンセル',
-    gender              ENUM('male', 'female') NULL COMMENT '男女別定員・料金の回だけ使う',
     fee                 INT UNSIGNED NULL COMMENT 'この人の参加費（申込時点の金額）',
     answers             JSON         NULL COMMENT '追加項目の回答（event_types.form_fields に対応）',
     raw_data            JSON         NULL COMMENT '取り込んだ元データそのまま（列の対応を後から直せるように）',

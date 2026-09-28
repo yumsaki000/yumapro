@@ -6,7 +6,7 @@ MINATO のイベント（リトリート／女子会／自己啓発／合コン�
 ## 現状
 
 - 要件整理前（林さんの回答待ち）
-- あるのは土台だけ：準備中ページ、`/health`、テーブル定義（案）
+- できているもの：準備中ページ、`/health`、テーブル定義（案）、管理画面のログイン（`/admin`）、CSRF対策の共通の仕組み、顧客の移行スクリプト（`docs/migration.md`）
 - 方針：こくちーずのような自前のイベント掲示板＋申込フォームで新規集客（特に女子会）をする。申込は掲示板のフォームに一本化し、集客の窓口（こくちーず・公式サイト・SNS）からはリンクする。スタッフの手入力と、今のスプレッドシートからの1回だけの移行も受ける（`docs/requirements.md` の 1-2・1-3・決定事項）。受け付け・名寄せ・出禁チェックの設計は `docs/data-intake.md`
 - 最初に作る形式は女子会の見込み（ヒアリングで確認中）
 - 形式が決まるまでは、形式に依存しない部分（管理画面ログイン、回の作成・複製、顧客台帳、当日受付、会計）から作る
@@ -28,7 +28,10 @@ make up        # 起動  http://localhost:8080 / phpMyAdmin http://localhost:808
 make down      # 停止
 make db-reset  # DB を database/init/*.sql から作り直す（データは消える）
 make lint      # PHP の文法チェック
+make test      # テスト（tests/*Test.php。DBを使わないものだけ）
 make db        # DB に SQL で入る
+make admin     # 管理画面のアカウントを作る（パスワード再設定は make admin-reset）
+make import-customers LIST=… RESPONSES=… [COMMIT=1]  # 今のスプレッドシートから顧客を移す（docs/migration.md）
 ```
 
 ## ディレクトリ
@@ -37,6 +40,11 @@ make db        # DB に SQL で入る
 public/      ドキュメントルート（index.php・.htaccess・assets）。ここ以外は Web に出さない
 src/         PHP コード。App\ 名前空間 → src/ に対応（bootstrap.php の自前オートローダー）
   routes.php URL と処理の対応
+  Auth.php / Csrf.php / Session.php  ログイン・CSRF・セッション
+  Normalize.php  電話・メール・名前・フリガナ・SNSのそろえ方（名寄せ・出禁チェック・移行で共通）
+  Migration/     今のスプレッドシートからの移行
+bin/         コマンドラインで使うもの（アカウント作成、移行）。Web には出ない
+tests/       テスト（依存なしの tests/run.php で流す）
 templates/   画面（layout.php で包む）。View::render('名前', [...])
 database/
   init/        テーブル定義と初期データ。Docker の初回起動で番号順に流れる
@@ -50,7 +58,9 @@ storage/     アップロード写真など（Git に入れない）
 - 画面の文言は日本語。参加者も受付担当もスマホで使う前提で作る
 - HTML に出す値は必ず `e()` を通す
 - SQL は必ずプリペアドステートメントで値を渡す（文字列連結しない）
-- フォームには CSRF トークンを付ける（最初のフォームを作るときに共通の仕組みにする）
+- POST はすべて `public/index.php` で CSRF トークンを確かめる。フォームには `<?= csrf_field() ?>` を必ず入れる
+- 管理画面の処理は先頭で `Auth::requireAdmin()` を呼ぶ
+- 電話・メール・名前・フリガナ・SNS は保存も比較も `Normalize` を通す
 - 管理者パスワードは `password_hash()` / `password_verify()`。アカウントは個人ごと
 - 個人情報は最小限。参加者の項目を増やす前に要件（`docs/requirements.md` の 6・8）を確認する
 - 定員判定・当日受付は同時操作を前提に、トランザクション＋`SELECT ... FOR UPDATE` で守る

@@ -9,6 +9,7 @@ MINATO のイベントの告知・申込・当日受付・会計を少人数で�
 - ヒアリングシート（統合版）の質問一覧：[docs/hearing-sheet.md](docs/hearing-sheet.md)
 - Mac での開発環境づくり：[docs/setup-mac.md](docs/setup-mac.md)
 - Xserver への配置（案）：[docs/deploy-xserver.md](docs/deploy-xserver.md)
+- 今のスプレッドシートからの移行：[docs/migration.md](docs/migration.md)
 
 ## すぐ動かす
 
@@ -19,6 +20,7 @@ make setup
 ```
 
 - アプリ：<http://localhost:8080>
+- 管理画面：<http://localhost:8080/admin>（先に `make admin` でアカウントを作る）
 - 動作確認：<http://localhost:8080/health>
 - phpMyAdmin：<http://localhost:8081>
 

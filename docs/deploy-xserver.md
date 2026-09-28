@@ -53,9 +53,13 @@ Web から見えるのは `public/` だけにする。`.env`（パスワード�
    ```
 
 7. **確認**：`https://event.minatocrew.com/` に準備中ページ、`/health` に `{"app":"ok","db":"ok"}` が出ればOK
+8. **管理画面のアカウント**：SSHで `php bin/create-admin.php` を実行し、運営メンバー1人ずつに作る（SSHの `php` のバージョンがサーバーパネルの設定と違う場合があるので、`php -v` で 8.3 か確かめる）
+9. **顧客の移行**：[migration.md](migration.md) の手順で、SSHから `php bin/import-customers.php` を実行する
 
 ## 本番で気をつけること
 
 - `APP_DEBUG=false` にする（エラー内容を画面に出さない）
+- `APP_URL` を `https://` で始める（ログインのCookieが https でしか送られなくなる）
+- ログイン失敗の制限はIPごとにもかけている。公開後、`REMOTE_ADDR` が利用者のIPになっているか確かめる（全員が同じIPに見えると、1人の失敗で全員が止まる）
 - `.env` は Git に入れない。パスワードは個人ごとの管理にする
 - データのバックアップは Xserver の自動バックアップに加え、契約終了時の CSV 引き渡しを想定しておく
