@@ -75,7 +75,35 @@ $embedTop = '<div data-minato-events data-limit="3"></div>' . "\n" . '<script sr
 </section>
 
 <section class="card">
-    <h2>4. こくちーず・SNS から</h2>
+    <h2>4. 公式LINE から</h2>
+    <p class="text-muted">公式LINEの管理画面（LINE Official Account Manager）で、リッチメニュー（トーク画面の下のボタン）やあいさつメッセージに次のリンクを入れます。<code>?from=line</code> で、LINEから来た申込が「集計」で分かります。</p>
+    <?php
+    $lineLinks = [
+        ['イベント一覧（申込）', $appUrl . '/?from=line'],
+        ['マイページ（申込の確認・キャンセル）', $appUrl . '/my'],
+        ['クルー募集', $appUrl . '/crew?from=line'],
+        ['講座・動画', $appUrl . '/learn'],
+    ];
+    ?>
+    <div class="table-wrap">
+        <table class="table">
+            <thead><tr><th>ボタン</th><th>リンク先</th><th></th></tr></thead>
+            <tbody>
+                <?php foreach ($lineLinks as $i => [$label, $url]): ?>
+                    <tr>
+                        <td class="wrap"><?= e($label) ?></td>
+                        <td class="wrap"><code id="line-<?= $i ?>"><?= e($url) ?></code></td>
+                        <td><button type="button" class="button button--small" data-copy-target="line-<?= $i ?>">コピー</button></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small">回ごとのお知らせは、回の画面の「告知に使うリンクと文面」で貼る場所を「MINATO公式LINE」にすると、LINE 用のリンク入りの文面ができます。</p>
+</section>
+
+<section class="card">
+    <h2>5. こくちーず・SNS から</h2>
     <p class="text-muted">こくちーずは「掲載」だけに使い、申込は回のページに集めます。回の画面の「告知に使うリンクと文面」から、こくちーず用・Instagram 用のリンク入りの告知文をコピーできます。</p>
 </section>
 

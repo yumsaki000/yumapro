@@ -715,11 +715,11 @@ pre.plain {
     transform: translateY(-50%);
 }
 
+/* transform を使うと中の fixed のパネルがボタン基準になってしまうので、top で位置を合わせる */
 .site-menu {
     position: absolute;
-    top: 50%;
+    top: 8px;
     right: 6px;
-    transform: translateY(-50%);
 }
 
 .site-menu summary {
@@ -1758,6 +1758,7 @@ body.embed {
     }
 
     .site-menu {
+        top: 13px;
         right: 16px;
     }
 

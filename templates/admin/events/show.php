@@ -71,7 +71,7 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
         <p class="alert alert--info">いまは「<?= e(App\Events::STATUSES[$event['status']] ?? '') ?>」です。状態を「募集中」にすると、掲示板に出て申し込めるようになります。</p>
     <?php endif; ?>
     <p class="text-muted">貼る場所を選ぶと、その場所用のリンク（どこから申込が来たかが「集計」で分かる）に変わります。こくちーずの説明欄や Instagram・LINE にそのまま貼れます。</p>
-    <div class="announce" data-base="<?= e($baseUrl . '/e/' . $event['slug']) ?>">
+    <div class="announce form" data-base="<?= e($baseUrl . '/e/' . $event['slug']) ?>">
         <label class="form__field">
             <span class="form__label">貼る場所</span>
             <select class="announce__channel">
