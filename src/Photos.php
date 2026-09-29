@@ -68,7 +68,9 @@ final class Photos
                 continue;
             }
             if (count($names) >= $max) {
-                $errors[] = "写真は{$max}枚までです。多い分は保存していません。";
+                $errors[] = $max === 0
+                    ? '写真はもう上限まで入っているので、新しい写真は保存していません。消してから足してください。'
+                    : "写真はあと{$max}枚までなので、それより多い分は保存していません。";
                 break;
             }
             $result = self::store($file);

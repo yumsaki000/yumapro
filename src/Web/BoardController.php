@@ -28,7 +28,6 @@ final class BoardController
         $types = Events::publicTypes();
         $type = is_string($_GET['type'] ?? null) && isset($types[$_GET['type']]) ? $_GET['type'] : null;
         $from = Applications::entryFrom($_GET['from'] ?? null);
-        $name = Settings::get('public_name');
         echo View::render('board/index', [
             'title' => 'イベント一覧',
             'events' => Events::publicList($type),

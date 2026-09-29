@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Admin;
 
 use App\Auth;
+use App\Events;
 use App\Form;
 use App\Mailer;
 use App\Session;
@@ -89,7 +90,7 @@ final class SettingsController
             'admin' => $admin,
             'appUrl' => app_url(),
             'officialUrl' => Settings::get('official_site_url'),
-            'types' => \App\Events::types(),
+            'types' => Events::types(),
         ], 'admin/layout');
     }
 }
