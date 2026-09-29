@@ -25,6 +25,7 @@ $optedIn = App\Customers::isMailOptedIn($customer);
         <?php if ($customer['banned_at'] !== null): ?>
             <dt>出禁</dt><dd><?= e(fmt_dt($customer['banned_at'])) ?><?= $customer['ban_reason'] !== null ? '：' . e($customer['ban_reason']) : '' ?><?php if ($customer['ban_note'] !== null): ?><br><pre class="plain text-muted"><?= e($customer['ban_note']) ?></pre><?php endif; ?></dd>
         <?php endif; ?>
+        <dt>クルー</dt><dd><span class="<?= e(App\Crew::STATUS_BADGES[$customer['crew_status']] ?? 'badge') ?>"><?= e(App\Crew::STATUSES[$customer['crew_status']] ?? '') ?></span><?= $customer['crew_joined_at'] !== null ? '　加入 ' . e($customer['crew_joined_at']) : '' ?><?= $customer['crew_left_at'] !== null ? '　脱退 ' . e($customer['crew_left_at']) : '' ?><?= $customer['crew_note'] !== null ? '<br><span class="text-muted">' . e($customer['crew_note']) . '</span>' : '' ?></dd>
         <?php if ($customer['legacy_no'] !== null): ?><dt>移行元の番号</dt><dd><?= (int) $customer['legacy_no'] ?></dd><?php endif; ?>
         <dt>登録日</dt><dd><?= e(fmt_dt($customer['created_at'], false)) ?></dd>
         <?php if ($customer['note'] !== null): ?><dt>運営メモ</dt><dd><pre class="plain"><?= e($customer['note']) ?></pre></dd><?php endif; ?>
@@ -81,6 +82,26 @@ $optedIn = App\Customers::isMailOptedIn($customer);
         </ul>
     </section>
 <?php endif; ?>
+
+<section class="card">
+    <h2>クルー</h2>
+    <form method="post" action="/admin/crew/<?= $id ?>/status" class="form">
+        <?= csrf_field() ?>
+        <div class="form__row">
+            <label class="form__field">
+                <span class="form__label">状態</span>
+                <select name="crew_status">
+                    <?php foreach (App\Crew::STATUSES as $code => $label): ?><option value="<?= e($code) ?>"<?= $customer['crew_status'] === $code ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach; ?>
+                </select>
+            </label>
+            <label class="form__field"><span class="form__label">加入日</span><input type="date" name="crew_joined_at" value="<?= e($customer['crew_joined_at'] ?? '') ?>"></label>
+            <label class="form__field"><span class="form__label">脱退日</span><input type="date" name="crew_left_at" value="<?= e($customer['crew_left_at'] ?? '') ?>"></label>
+        </div>
+        <label class="form__field"><span class="form__label">メモ（連絡の希望など）</span><input type="text" name="crew_note" value="<?= e($customer['crew_note'] ?? '') ?>" maxlength="255"></label>
+        <button type="submit" class="button">保存する</button>
+        <span class="form__help">「加入中」にすると、クルー料金のある回に申し込んだとき自動でクルー料金になり、クルー限定の講座が見られます</span>
+    </form>
+</section>
 
 <section class="card">
     <h2>出禁</h2>

@@ -87,6 +87,7 @@ CREATE TABLE events (
     fee                 INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '参加費（円）',
     fee_male            INT UNSIGNED NULL COMMENT '男女別料金（合コン用）',
     fee_female          INT UNSIGNED NULL,
+    fee_crew            INT UNSIGNED NULL COMMENT 'クルー料金（円）。NULL ならクルー割引なし',
     payment_timing      ENUM('prepaid', 'onsite') NOT NULL,
     apply_deadline      DATETIME     NULL COMMENT '申込締切',
     cancel_deadline     DATETIME     NULL COMMENT 'キャンセル期限（自動計算して保存）',
@@ -127,6 +128,10 @@ CREATE TABLE customers (
     ban_reason      VARCHAR(255) NULL COMMENT '出禁の理由（運営向け・短く）',
     ban_note        TEXT         NULL COMMENT '出禁の経緯など（運営向け。証拠の画像は貼らず、要点や保管場所だけ）',
     banned_by       INT UNSIGNED NULL COMMENT '出禁にした運営メンバー',
+    crew_status     ENUM('none', 'applied', 'active', 'left') NOT NULL DEFAULT 'none' COMMENT 'クルー: 未加入／申込中／加入中／脱退',
+    crew_joined_at  DATE         NULL COMMENT 'クルー加入日',
+    crew_left_at    DATE         NULL COMMENT 'クルー脱退日',
+    crew_note       VARCHAR(255) NULL COMMENT 'クルーについての運営メモ（連絡の希望など）',
     access_token    VARCHAR(64)  NOT NULL COMMENT '個人専用URL用のランダム文字列',
     legacy_no       INT UNSIGNED NULL COMMENT '移行元（今のスプレッドシートの声掛けリスト）の番号',
     legacy_data     JSON         NULL COMMENT '移行元の行をそのまま（使い道が決まっていない列も失わないため）',
@@ -140,7 +145,95 @@ CREATE TABLE customers (
     KEY idx_customers_sns (sns_account),
     KEY idx_customers_name_kana (name_kana),
     KEY idx_customers_banned (banned_at),
+    KEY idx_customers_crew (crew_status),
     CONSTRAINT fk_customers_banned_by FOREIGN KEY (banned_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- クルーの申込（募集ページのフォームから。運営が承認すると customers.crew_status が加入中になる）
+CREATE TABLE crew_applications (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    customer_id     INT UNSIGNED NOT NULL,
+    status          ENUM('applied', 'approved', 'declined') NOT NULL DEFAULT 'applied' COMMENT '申込中／承認／お断り',
+    answers         JSON         NULL COMMENT '地域・連絡の希望・コメントなど',
+    consented_at    DATETIME     NULL COMMENT '規約などに同意した日時',
+    decided_by      INT UNSIGNED NULL,
+    decided_at      DATETIME     NULL,
+    note            VARCHAR(255) NULL COMMENT '運営メモ',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_crew_applications_status (status, created_at),
+    CONSTRAINT fk_crew_applications_customer FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE,
+    CONSTRAINT fk_crew_applications_admin FOREIGN KEY (decided_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 参加者のログイン用リンク（メールで届く。30分で失効、1回だけ使える）
+CREATE TABLE login_tokens (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    customer_id     INT UNSIGNED NOT NULL,
+    token_hash      CHAR(64)     NOT NULL COMMENT 'リンクの文字列の SHA-256（文字列そのものは保存しない）',
+    expires_at      DATETIME     NOT NULL,
+    used_at         DATETIME     NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_login_tokens_hash (token_hash),
+    KEY idx_login_tokens_customer (customer_id, created_at),
+    CONSTRAINT fk_login_tokens_customer FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 講座（動画研修・記事などのコンテンツのまとまり）
+CREATE TABLE courses (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    slug            VARCHAR(32)  NOT NULL COMMENT '公開ページURL用のランダム文字列',
+    title           VARCHAR(200) NOT NULL,
+    description     TEXT         NULL COMMENT '講座の説明（一覧と講座ページに出す）',
+    access          ENUM('public', 'crew', 'paid') NOT NULL DEFAULT 'crew' COMMENT '誰が見られるか: 全員／クルー／購入した人',
+    price           INT UNSIGNED NULL COMMENT '購入の料金（円）。access=paid のとき',
+    crew_included   TINYINT(1)   NOT NULL DEFAULT 1 COMMENT 'access=paid の講座をクルーは購入なしで見られるか',
+    status          ENUM('draft', 'published') NOT NULL DEFAULT 'draft' COMMENT '下書き／公開',
+    sort_order      INT          NOT NULL DEFAULT 0,
+    created_by      INT UNSIGNED NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_courses_slug (slug),
+    CONSTRAINT fk_courses_admin FOREIGN KEY (created_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 講座の各回（本文と YouTube の動画）
+CREATE TABLE lessons (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    course_id       INT UNSIGNED NOT NULL,
+    title           VARCHAR(200) NOT NULL,
+    body            TEXT         NULL COMMENT '本文（改行そのまま。URLはリンクになる）',
+    youtube_id      VARCHAR(20)  NULL COMMENT 'YouTube の動画ID（限定公開の動画）',
+    is_preview      TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '1 なら誰でも見られる（お試し）',
+    status          ENUM('draft', 'published') NOT NULL DEFAULT 'published',
+    sort_order      INT          NOT NULL DEFAULT 0,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_lessons_course (course_id, sort_order, id),
+    CONSTRAINT fk_lessons_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 講座の購入（前払い。運営が入金を確認すると見られるようになる）
+CREATE TABLE course_purchases (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    course_id       INT UNSIGNED NOT NULL,
+    customer_id     INT UNSIGNED NOT NULL,
+    amount          INT UNSIGNED NOT NULL COMMENT '料金（申込時点の金額・円）',
+    status          ENUM('pending', 'paid', 'cancelled') NOT NULL DEFAULT 'pending' COMMENT '入金待ち／入金確認済み／取り消し',
+    paid_at         DATETIME     NULL,
+    payment_method  VARCHAR(20)  NULL,
+    confirmed_by    INT UNSIGNED NULL,
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_course_purchases (course_id, customer_id),
+    KEY idx_course_purchases_status (status, created_at),
+    CONSTRAINT fk_course_purchases_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE,
+    CONSTRAINT fk_course_purchases_customer FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE,
+    CONSTRAINT fk_course_purchases_admin FOREIGN KEY (confirmed_by) REFERENCES admins (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 取り込み履歴（今のスプレッドシートからの移行など、まとめて取り込んだ1回につき1行）

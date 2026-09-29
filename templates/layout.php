@@ -3,6 +3,9 @@
 /** @var string $content */
 $flashNotice = App\Session::flash('notice');
 $flashError = App\Session::flash('error');
+$me = App\CustomerAuth::current();
+$path = current_path();
+$nav = [['/', 'イベント'], ['/learn', '講座・動画'], ['/crew', 'クルー募集']];
 ?>
 <!doctype html>
 <html lang="ja">
@@ -20,6 +23,19 @@ $flashError = App\Session::flash('error');
             <span class="site-header__sub">MINATO イベント</span>
         </div>
     </header>
+    <nav class="site-nav">
+        <div class="site-nav__inner">
+            <?php foreach ($nav as [$href, $label]): ?>
+                <?php $active = $path === $href || ($href !== '/' && str_starts_with($path, $href)); ?>
+                <a class="site-nav__link<?= $active ? ' is-active' : '' ?>" href="<?= e($href) ?>"><?= e($label) ?></a>
+            <?php endforeach; ?>
+            <?php if ($me !== null): ?>
+                <a class="site-nav__link<?= str_starts_with($path, '/my') ? ' is-active' : '' ?>" href="/my/<?= e($me['access_token']) ?>">マイページ</a>
+            <?php else: ?>
+                <a class="site-nav__link<?= str_starts_with($path, '/login') ? ' is-active' : '' ?>" href="/login">ログイン</a>
+            <?php endif; ?>
+        </div>
+    </nav>
     <main class="container">
         <?php if ($flashNotice !== null): ?>
             <p class="alert alert--info flash"><?= e($flashNotice) ?></p>
@@ -32,6 +48,9 @@ $flashError = App\Session::flash('error');
     <footer class="site-footer">
         <a href="https://minatocrew.com/" target="_blank" rel="noopener">MINATO 公式サイト</a>
         <a href="<?= e(App\Settings::get('privacy_url')) ?>" target="_blank" rel="noopener">プライバシーポリシー</a>
+        <?php if ($me !== null): ?>
+            <form method="post" action="/logout" class="inline-form"><?= csrf_field() ?><button type="submit" class="linklike">ログアウト（<?= e($me['name']) ?>）</button></form>
+        <?php endif; ?>
     </footer>
 </body>
 </html>

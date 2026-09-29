@@ -110,6 +110,11 @@ $v = fn (string $key) => e($values[$key] ?? '');
                     </label>
                 </div>
                 <label class="form__field">
+                    <span class="form__label">クルー料金（円。任意）</span>
+                    <input type="number" name="fee_crew" value="<?= $v('fee_crew') ?>" min="0" inputmode="numeric">
+                    <span class="form__help">加入中のクルーが申し込むと、自動でこの料金になります</span>
+                </label>
+                <label class="form__field">
                     <span class="form__label">支払い</span>
                     <select name="payment_timing" id="payment_timing">
                         <?php foreach (App\Events::PAYMENT_TIMINGS as $code => $label): ?>

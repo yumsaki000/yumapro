@@ -194,8 +194,9 @@ final class Applications
             Database::pdo()->prepare('DELETE FROM registrations WHERE id = ?')->execute([$existing['id']]);
         }
 
+        $isCrew = $customer !== null && $customer['crew_status'] === 'active';
         $result = Registrations::create((int) $event['id'], $customerId, [
-            'fee' => Events::feeFor($event, $values['gender']),
+            'fee' => Events::feeFor($event, $isCrew ? ($customer['gender'] ?? $values['gender']) : $values['gender'], $isCrew),
             'channel' => $values['channel'],
             'note' => null,
             'source' => 'own_form',

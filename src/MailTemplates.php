@@ -62,6 +62,45 @@ final class MailTemplates
     }
 
     /**
+     * 顧客宛てのメール（申込に紐づかないもの）：クルー申込・承認、ログイン用リンク、講座の購入。
+     * kind は設定の mail_{kind}_subject / _body に対応する。
+     */
+    public static function sendCustomerMail(string $kind, array $customer, array $extra = []): bool
+    {
+        $to = $customer['email'] ?? null;
+        if ($to === null || $to === '') {
+            return false;
+        }
+        $base = rtrim((string) Config::get('APP_URL', ''), '/');
+        $vars = $extra + [
+            'name' => (string) $customer['name'],
+            'my_url' => $base . '/my/' . $customer['access_token'],
+            'login_url' => $base . '/login',
+            'crew_fee_text' => Settings::get('crew_fee_text'),
+            'contact_text' => Settings::get('contact_text'),
+            'official_line_url' => Settings::get('official_line_url'),
+        ];
+        $subject = self::fill(Settings::get("mail_{$kind}_subject"), $vars);
+        $body = self::fill(Settings::get("mail_{$kind}_body"), $vars) . "\n\n" . self::fill(Settings::get('mail_signature'), $vars);
+        $body = (string) preg_replace("/\n{3,}/", "\n\n", $body);
+        return Mailer::send($to, $subject, $body, $kind, null, (int) $customer['id']);
+    }
+
+    /** 運営への通知（申込以外：クルー申込・講座の購入）。宛先が設定されていれば送る */
+    public static function notifyStaffText(string $subject, array $lines, ?int $customerId = null): bool
+    {
+        $addresses = array_filter(array_map('trim', explode(',', Settings::get('staff_notify_email'))));
+        if ($addresses === []) {
+            return false;
+        }
+        $ok = true;
+        foreach ($addresses as $to) {
+            $ok = Mailer::send($to, $subject, implode("\n", $lines), 'staff_notify', null, $customerId) && $ok;
+        }
+        return $ok;
+    }
+
+    /**
      * 運営への通知（申込フォームからの申込）。出禁に該当・要確認のときに送る。設定で「すべて」にもできる。
      */
     public static function notifyStaff(array $r): bool

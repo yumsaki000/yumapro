@@ -26,6 +26,9 @@ test('移行：見出しの行を見つけ、名前のある行を顧客にす�
     assert_same('知り合い', $hanako['first_channel']);
     assert_same('よく来る', $hanako['note']);
     assert_same('クルー加入', $hanako['legacy_data']['クルー勧誘'], '使い道が決まっていない列も残す');
+    assert_same('active', $hanako['crew_status'], 'クルー加入日があれば加入中');
+    assert_same('2026-01-10', $hanako['crew_joined_at']);
+    assert_same('none', $list['records'][1]['crew_status']);
     assert_same('サトウタロウ', $list['records'][1]['name_kana'], 'ひらがなのフリガナはカタカナに');
     assert_same("改行を\n含む備考", $list['records'][3]['note'], '改行を含むセル');
 });

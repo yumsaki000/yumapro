@@ -55,7 +55,7 @@ final class RegistrationsController
             $existing = Registrations::findByEventAndCustomer((int) $event['id'], $customerId);
         }
         $values = [
-            'fee' => Events::feeFor($event, $customer['gender'] ?? null),
+            'fee' => Events::feeFor($event, $customer['gender'] ?? null, ($customer['crew_status'] ?? 'none') === 'active'),
             'channel' => null,
             'note' => null,
             'prepaid' => false,

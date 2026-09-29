@@ -148,6 +148,7 @@ final class EventsController
             'fee' => 0,
             'fee_male' => null,
             'fee_female' => null,
+            'fee_crew' => null,
             'payment_timing' => $first['payment_timing'] ?? 'prepaid',
             'apply_deadline' => null,
             'cancel_deadline' => null,
@@ -211,7 +212,7 @@ final class EventsController
 
         foreach ([
             'round_no' => ['第n回', false], 'capacity' => ['定員', false], 'capacity_male' => ['男性の定員', false], 'capacity_female' => ['女性の定員', false],
-            'fee' => ['参加費', true], 'fee_male' => ['男性の参加費', false], 'fee_female' => ['女性の参加費', false], 'organizer_amount' => ['主催分', true],
+            'fee' => ['参加費', true], 'fee_male' => ['男性の参加費', false], 'fee_female' => ['女性の参加費', false], 'fee_crew' => ['クルー料金', false], 'organizer_amount' => ['主催分', true],
         ] as $field => [$label, $required]) {
             $value = Form::int($input, $field);
             if ($value === false || (is_int($value) && $value < 0)) {

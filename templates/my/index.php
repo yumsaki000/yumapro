@@ -16,6 +16,10 @@ $statusLabel = fn (array $r) => match ($r['status']) {
     <h1><?= e($customer['name']) ?> 様のお申込み</h1>
     <p class="text-muted">このページはご本人専用です。URLを他の人に教えないでください。</p>
 
+    <p>
+        <?php if ($isCrew): ?><span class="badge badge--ok">クルー</span> クルー限定の講座・動画は<a href="/learn">こちら</a><?php elseif ($crewStatus === 'applied'): ?><span class="badge badge--warn">クルー申込中</span> 運営からの連絡をお待ちください<?php else: ?><a href="/crew">クルーになると、参加費の割引や限定の講座が見られます</a><?php endif; ?>
+    </p>
+
     <h2>これからのイベント</h2>
     <?php if ($upcoming === []): ?><p class="text-muted">お申込み中のイベントはありません。<a href="/">イベント一覧を見る</a></p><?php endif; ?>
     <?php foreach ($upcoming as $r): ?>

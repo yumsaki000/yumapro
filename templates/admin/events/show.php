@@ -21,7 +21,7 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
     <dl class="kv">
         <dt>日時</dt><dd><?= e(fmt_dt($event['starts_at'])) ?><?= $event['ends_at'] !== null ? ' 〜 ' . e(fmt_dt($event['ends_at'])) : '' ?></dd>
         <dt>会場</dt><dd><?= e($event['venue_name'] ?? '—') ?><?php if ($event['venue_url'] !== null): ?> <a href="<?= e($event['venue_url']) ?>" target="_blank" rel="noopener">地図</a><?php endif; ?><?php if ($event['venue_address'] !== null): ?><br><span class="text-muted"><?= e($event['venue_address']) ?></span><?php endif; ?></dd>
-        <dt>参加費</dt><dd><?= e(yen($event['fee'])) ?><?php if ($event['fee_male'] !== null || $event['fee_female'] !== null): ?>（男性 <?= e(yen($event['fee_male'] ?? $event['fee'])) ?>／女性 <?= e(yen($event['fee_female'] ?? $event['fee'])) ?>）<?php endif; ?>・<?= e(App\Events::PAYMENT_TIMINGS[$event['payment_timing']] ?? '') ?></dd>
+        <dt>参加費</dt><dd><?= e(yen($event['fee'])) ?><?php if ($event['fee_male'] !== null || $event['fee_female'] !== null): ?>（男性 <?= e(yen($event['fee_male'] ?? $event['fee'])) ?>／女性 <?= e(yen($event['fee_female'] ?? $event['fee'])) ?>）<?php endif; ?><?php if ($event['fee_crew'] !== null): ?>・クルー <?= e(yen($event['fee_crew'])) ?><?php endif; ?>・<?= e(App\Events::PAYMENT_TIMINGS[$event['payment_timing']] ?? '') ?></dd>
         <dt>定員</dt><dd><?= $capacity === null ? '上限なし' : $capacity . '人' ?><?php if ($event['capacity_male'] !== null || $event['capacity_female'] !== null): ?>（男性 <?= e((string) ($event['capacity_male'] ?? '—')) ?>／女性 <?= e((string) ($event['capacity_female'] ?? '—')) ?>）<?php endif; ?></dd>
         <dt>申込締切</dt><dd><?= e(fmt_dt($event['apply_deadline'])) ?></dd>
         <dt>キャンセル期限</dt><dd><?= e(fmt_dt($event['cancel_deadline'])) ?></dd>

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Web;
 
 use App\Applications;
+use App\Crew;
+use App\CustomerAuth;
 use App\Customers;
 use App\Form;
 use App\MailTemplates;
@@ -19,9 +21,21 @@ use App\View;
  */
 final class MyPageController
 {
+    /** /my：ログイン中の人の個人専用ページへ */
+    public static function mine(): void
+    {
+        $customer = CustomerAuth::requireLogin();
+        redirect('/my/' . $customer['access_token']);
+    }
+
     public static function show(string $token): void
     {
         $customer = Customers::findByToken($token) ?? abort_not_found();
+        $current = CustomerAuth::current();
+        if ($current === null || (int) $current['id'] !== (int) $customer['id']) {
+            // 本人専用のURLを開いた＝本人なので、講座なども見られるようログイン状態にする
+            CustomerAuth::login((int) $customer['id']);
+        }
         $upcoming = [];
         $past = [];
         foreach (Registrations::forCustomer((int) $customer['id']) as $r) {
@@ -45,6 +59,8 @@ final class MyPageController
             'optedIn' => Customers::isMailOptedIn($customer),
             'bankAccount' => trim(Settings::get('bank_account')),
             'contact' => Settings::get('contact_text'),
+            'crewStatus' => $customer['crew_status'] ?? 'none',
+            'isCrew' => Crew::isActive($customer),
         ]);
     }
 

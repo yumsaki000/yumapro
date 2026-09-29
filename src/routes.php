@@ -6,6 +6,8 @@ use App\Admin\AccountingController;
 use App\Admin\BansController;
 use App\Admin\ChannelsController;
 use App\Admin\CheckinController;
+use App\Admin\CoursesController;
+use App\Admin\CrewController as AdminCrewController;
 use App\Admin\CustomersController;
 use App\Admin\EventsController;
 use App\Admin\MailController;
@@ -21,6 +23,9 @@ use App\Router;
 use App\Session;
 use App\View;
 use App\Web\BoardController;
+use App\Web\CrewController;
+use App\Web\LearnController;
+use App\Web\LoginController;
 use App\Web\MyPageController;
 
 $router = new Router();
@@ -30,10 +35,23 @@ $router->get('/', [BoardController::class, 'index']);
 $router->get('/e/{slug}', [BoardController::class, 'show']);
 $router->form('/e/{slug}/apply', [BoardController::class, 'apply']);
 $router->get('/e/{slug}/done', [BoardController::class, 'done']);
+$router->get('/my', [MyPageController::class, 'mine']);
 $router->get('/my/{token}', [MyPageController::class, 'show']);
 $router->post('/my/{token}/cancel/{id}', [MyPageController::class, 'cancel']);
 $router->post('/my/{token}/mail', [MyPageController::class, 'mail']);
 $router->form('/my/{token}/survey/{id}', [MyPageController::class, 'survey']);
+
+// ── 参加者向け：ログイン（メールのリンク）、クルー募集、講座 ──────
+$router->get('/login', [LoginController::class, 'form']);
+$router->post('/login', [LoginController::class, 'send']);
+$router->get('/login/{token}', [LoginController::class, 'verify']);
+$router->post('/logout', [LoginController::class, 'logout']);
+$router->form('/crew', [CrewController::class, 'page']);
+$router->get('/crew/done', [CrewController::class, 'done']);
+$router->get('/learn', [LearnController::class, 'index']);
+$router->get('/learn/{slug}', [LearnController::class, 'course']);
+$router->post('/learn/{slug}/purchase', [LearnController::class, 'purchase']);
+$router->get('/learn/{slug}/{id}', [LearnController::class, 'lesson']);
 
 // 動作確認用：アプリとDBがつながっているか
 $router->get('/health', function (): void {
@@ -103,6 +121,8 @@ $router->get('/admin', function (): void {
         'admin' => $admin,
         'upcoming' => Events::upcoming(5),
         'pendingReviews' => count(App\Bans::pendingReviews()),
+        'pendingCrew' => count(App\Crew::applications('applied')),
+        'pendingPurchases' => count(App\Courses::purchases('pending')),
     ], 'admin/layout');
 });
 
@@ -143,6 +163,22 @@ $router->post('/admin/customers/merge', [CustomersController::class, 'merge']);
 $router->get('/admin/customers/{id}', [CustomersController::class, 'show']);
 $router->form('/admin/customers/{id}/edit', [CustomersController::class, 'edit']);
 $router->post('/admin/customers/{id}/ban', [CustomersController::class, 'ban']);
+
+// ── クルー・講座 ─────────────────────────────────────────
+$router->get('/admin/crew', [AdminCrewController::class, 'index']);
+$router->post('/admin/crew/applications/{id}', [AdminCrewController::class, 'decide']);
+$router->post('/admin/crew/{customerId}/status', [AdminCrewController::class, 'status']);
+$router->get('/admin/courses', [CoursesController::class, 'index']);
+$router->form('/admin/courses/new', [CoursesController::class, 'create']);
+$router->get('/admin/courses/{id}', [CoursesController::class, 'show']);
+$router->form('/admin/courses/{id}/edit', [CoursesController::class, 'edit']);
+$router->post('/admin/courses/{id}/delete', [CoursesController::class, 'delete']);
+$router->post('/admin/courses/{id}/lessons', [CoursesController::class, 'addLesson']);
+$router->form('/admin/lessons/{id}/edit', [CoursesController::class, 'editLesson']);
+$router->post('/admin/lessons/{id}/delete', [CoursesController::class, 'deleteLesson']);
+$router->get('/admin/purchases', [CoursesController::class, 'purchases']);
+$router->post('/admin/purchases/{id}/paid', [CoursesController::class, 'purchasePaid']);
+$router->post('/admin/purchases/{id}/cancel', [CoursesController::class, 'purchaseCancel']);
 
 // ── 出禁リスト ─────────────────────────────────────────
 $router->get('/admin/bans', [BansController::class, 'index']);

@@ -27,6 +27,8 @@ final class CustomerListImport
         'gender' => ['性別'],
         'first_channel' => ['集客媒体'],
         'note' => ['備考', '備考欄'],
+        'crew_joined' => ['クルー加入日'],
+        'crew_left' => ['クルー脱退日'],
     ];
 
     private const GENDERS = ['男性' => 'male', '男' => 'male', '女性' => 'female', '女' => 'female'];
@@ -71,6 +73,8 @@ final class CustomerListImport
                 }
             }
 
+            $joined = self::parseDate($cell('crew_joined'));
+            $left = self::parseDate($cell('crew_left'));
             $records[] = [
                 'legacy_no' => $no,
                 'name' => $name,
@@ -78,6 +82,9 @@ final class CustomerListImport
                 'gender' => self::GENDERS[$cell('gender')] ?? null,
                 'first_channel' => $cell('first_channel') ?: null,
                 'note' => $cell('note') ?: null,
+                'crew_status' => $left !== null ? 'left' : ($joined !== null ? 'active' : 'none'),
+                'crew_joined_at' => $joined,
+                'crew_left_at' => $left,
                 'phone' => null,
                 'email' => null,
                 'sns_account' => null,
@@ -218,14 +225,18 @@ final class CustomerListImport
     public static function commit(PDO $pdo, array $records): array
     {
         $sql = 'INSERT INTO customers
-                    (legacy_no, name, name_kana, gender, first_channel, note, phone, email, sns_account, legacy_data, access_token)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (legacy_no, name, name_kana, gender, first_channel, note, crew_status, crew_joined_at, crew_left_at,
+                     phone, email, sns_account, legacy_data, access_token)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     name = VALUES(name),
                     name_kana = VALUES(name_kana),
                     gender = VALUES(gender),
                     first_channel = VALUES(first_channel),
                     note = VALUES(note),
+                    crew_status = VALUES(crew_status),
+                    crew_joined_at = VALUES(crew_joined_at),
+                    crew_left_at = VALUES(crew_left_at),
                     legacy_data = VALUES(legacy_data),
                     phone = COALESCE(phone, VALUES(phone)),
                     email = COALESCE(email, VALUES(email)),
@@ -239,6 +250,7 @@ final class CustomerListImport
                 try {
                     $stmt->execute([
                         $r['legacy_no'], $r['name'], $r['name_kana'], $r['gender'], $r['first_channel'], $r['note'],
+                        $r['crew_status'], $r['crew_joined_at'], $r['crew_left_at'],
                         $r['phone'], $r['email'], $r['sns_account'],
                         json_encode($r['legacy_data'], JSON_UNESCAPED_UNICODE),
                         bin2hex(random_bytes(16)),
@@ -256,6 +268,17 @@ final class CustomerListImport
             throw $e;
         }
         return $counts;
+    }
+
+    /** シートの日付（2026/01/10 など）→ Y-m-d。読めなければ null */
+    public static function parseDate(string $value): ?string
+    {
+        $value = trim(mb_convert_kana($value, 'as'));
+        if ($value === '' || !preg_match('/\d{4}/', $value)) {
+            return null;
+        }
+        $ts = strtotime(str_replace(['年', '月', '日'], ['/', '/', ''], $value));
+        return $ts === false ? null : date('Y-m-d', $ts);
     }
 
     /**

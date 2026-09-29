@@ -30,6 +30,7 @@ $applyUrl = '/e/' . $event['slug'] . '/apply' . ($from !== null ? '?from=' . raw
             <?php else: ?>
                 <?= e(yen($event['fee'])) ?>
             <?php endif; ?>
+            <?php if ($event['fee_crew'] !== null): ?>／クルー <?= e(yen($event['fee_crew'])) ?><?php endif; ?>
             （<?= e(App\Events::PAYMENT_TIMINGS[$event['payment_timing']] ?? '') ?>）
         </dd>
         <?php if ($event['capacity'] !== null): ?><dt>定員</dt><dd><?= (int) $event['capacity'] ?>人</dd><?php endif; ?>

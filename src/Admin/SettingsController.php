@@ -27,6 +27,11 @@ final class SettingsController
         'キャンセル確認メール' => ['mail_cancelled_subject', 'mail_cancelled_body'],
         '前日リマインド' => ['mail_reminder_subject', 'mail_reminder_body'],
         '翌日お礼（アンケートの案内）' => ['mail_thanks_subject', 'mail_thanks_body'],
+        'クルー募集ページと講座' => ['crew_intro', 'crew_benefits', 'crew_fee_text', 'crew_terms_url', 'crew_policy_url', 'crew_notice_text', 'learn_intro'],
+        'クルー・講座・ログインのメール' => [
+            'mail_crew_applied_subject', 'mail_crew_applied_body', 'mail_crew_approved_subject', 'mail_crew_approved_body',
+            'mail_login_subject', 'mail_login_body', 'mail_purchase_subject', 'mail_purchase_body', 'mail_purchase_paid_subject', 'mail_purchase_paid_body',
+        ],
     ];
 
     public static function index(): void
@@ -50,7 +55,7 @@ final class SettingsController
                     $errors[] = "運営への通知メールの宛先「{$address}」の形が正しくありません。";
                 }
             }
-            foreach (['official_line_url', 'privacy_url'] as $key) {
+            foreach (['official_line_url', 'privacy_url', 'crew_terms_url', 'crew_policy_url'] as $key) {
                 if (($values[$key] ?? '') !== '' && !preg_match('#\Ahttps?://#i', $values[$key])) {
                     $errors[] = Settings::ITEMS[$key][0] . 'は http:// か https:// で始めてください。';
                 }

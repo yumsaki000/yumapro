@@ -7,6 +7,8 @@ $path = current_path();
 $nav = [
     ['/admin/events', '回'],
     ['/admin/customers', '顧客'],
+    ['/admin/crew', 'クルー'],
+    ['/admin/courses', '講座'],
     ['/admin/accounting', '会計'],
     ['/admin/stats', '集計'],
     ['/admin/settings', '設定'],
@@ -43,7 +45,7 @@ $flashError = App\Session::flash('error');
         <nav class="admin-nav">
             <div class="admin-nav__inner">
                 <?php foreach ($nav as [$href, $label]): ?>
-                    <?php $active = $path === $href || str_starts_with($path, $href . '/') || ($href === '/admin/settings' && str_starts_with($path, '/admin/channels')); ?>
+                    <?php $active = $path === $href || str_starts_with($path, $href . '/') || ($href === '/admin/settings' && str_starts_with($path, '/admin/channels')) || ($href === '/admin/courses' && (str_starts_with($path, '/admin/lessons') || str_starts_with($path, '/admin/purchases'))); ?>
                     <a class="admin-nav__link<?= $active ? ' is-active' : '' ?>" href="<?= e($href) ?>"><?= e($label) ?></a>
                 <?php endforeach; ?>
             </div>

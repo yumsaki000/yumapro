@@ -34,7 +34,7 @@ final class Events
         'event_type_id', 'title', 'round_no', 'starts_at', 'ends_at',
         'venue_name', 'venue_address', 'venue_url',
         'capacity', 'capacity_male', 'capacity_female',
-        'fee', 'fee_male', 'fee_female', 'payment_timing',
+        'fee', 'fee_male', 'fee_female', 'fee_crew', 'payment_timing',
         'apply_deadline', 'cancel_deadline', 'cancel_policy',
         'organizer_amount', 'description', 'status',
     ];
@@ -168,9 +168,12 @@ final class Events
         Database::pdo()->prepare('UPDATE events SET organizer_amount = ? WHERE id = ?')->execute([$amount, $id]);
     }
 
-    /** この性別の人の参加費（男女別料金があればそれ） */
-    public static function feeFor(array $event, ?string $gender): int
+    /** この人の参加費。クルー（加入中）でクルー料金があればそれ、次に男女別料金、それ以外は共通の料金 */
+    public static function feeFor(array $event, ?string $gender, bool $isCrew = false): int
     {
+        if ($isCrew && ($event['fee_crew'] ?? null) !== null) {
+            return (int) $event['fee_crew'];
+        }
         if ($gender === 'male' && $event['fee_male'] !== null) {
             return (int) $event['fee_male'];
         }

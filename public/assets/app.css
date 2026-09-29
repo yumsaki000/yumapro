@@ -772,3 +772,80 @@ pre.plain {
     margin-bottom: 4px;
     overflow-wrap: anywhere;
 }
+
+/* ── 参加者向け：ナビ・講座 ─────────────────── */
+
+.site-nav {
+    background: #ffffff;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.site-nav__inner {
+    display: flex;
+    gap: 4px;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 8px;
+    overflow-x: auto;
+}
+
+.site-nav__link {
+    padding: 9px 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text);
+    text-decoration: none;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+}
+
+.site-nav__link.is-active {
+    color: var(--color-navy);
+    border-bottom-color: var(--color-orange);
+}
+
+.linklike {
+    padding: 0;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--color-accent);
+    text-decoration: underline;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.benefits {
+    padding-left: 0;
+    list-style: none;
+}
+
+.benefits li {
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background: var(--color-bg);
+    border-left: 4px solid var(--color-orange);
+    border-radius: 6px;
+}
+
+.video {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    margin: 12px 0 16px;
+    overflow: hidden;
+    background: #000;
+    border-radius: 10px;
+}
+
+.video iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.lesson-body {
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+}
