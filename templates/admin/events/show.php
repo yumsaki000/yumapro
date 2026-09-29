@@ -5,6 +5,7 @@
 /** @var string $baseUrl */
 $id = (int) $event['id'];
 $banLabels = ['suspect' => ['badge badge--warn', '要確認（出禁と同名）'], 'confirmed' => ['badge badge--danger', '出禁該当']];
+$pendingCount = count(array_filter($registrations, fn ($r) => in_array($r['ban_check'], ['suspect', 'confirmed'], true) && $r['status'] !== 'cancelled'));
 $capacity = $event['capacity'] !== null ? (int) $event['capacity'] : null;
 $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== 'cancelled' && $r['prepaid_at'] !== null));
 ?>
@@ -107,6 +108,9 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
 
 <section class="card">
     <h2>申込者（<?= count($registrations) ?>人）</h2>
+    <?php if ($pendingCount > 0): ?>
+        <p class="warning-box">出禁チェックで印が付いた申込が <?= $pendingCount ?>件あります。「詳細」から確認してください。</p>
+    <?php endif; ?>
     <?php if ($registrations === []): ?>
         <p class="text-muted">まだ申込がありません。</p>
     <?php else: ?>

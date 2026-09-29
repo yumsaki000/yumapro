@@ -14,7 +14,7 @@ MINATO のイベント（リトリート／女子会／自己啓発／合コン�
 ## 現状
 
 - 要件整理前（林さんの回答待ち）
-- できているもの：`/health`、テーブル定義（案）、管理画面のログイン（`/admin`）、CSRF対策の共通の仕組み、顧客の移行スクリプト（`docs/migration.md`）、管理画面の各機能（運営メンバー管理、回の作成・複製、申込の手入力、顧客台帳・名寄せ・出禁、当日受付、会計、集計、設定）、参加者向けの掲示板と申込フォーム（名寄せ・出禁チェック・定員でのキャンセル待ち・残席表示・締切）、個人専用ページ（確認・キャンセル・アンケート）、自動メール（確認・キャンセル待ち・繰り上げ・前日リマインド・翌日お礼）、キャンセル待ちの自動繰り上げ。使い方は `docs/admin-guide.md`
+- できているもの：`/health`、テーブル定義（案）、管理画面のログイン（`/admin`）、CSRF対策の共通の仕組み、顧客の移行スクリプト（`docs/migration.md`）、管理画面の各機能（運営メンバー管理、回の作成・複製、申込の手入力、顧客台帳・名寄せ、出禁リスト（登録・判定・確認待ちの処理・通知）、当日受付、会計、集計、設定）、参加者向けの掲示板と申込フォーム（名寄せ・出禁チェック・定員でのキャンセル待ち・残席表示・締切）、個人専用ページ（確認・キャンセル・アンケート）、自動メール（確認・キャンセル待ち・繰り上げ・前日リマインド・翌日お礼）、キャンセル待ちの自動繰り上げ。使い方は `docs/admin-guide.md`
 - まだのもの：問い合わせ、案内メールの一斉送信、QRコード受付、写真アルバム。申込フォームの項目・同意文・メール文面はヒアリングの回答で調整する（文言は設定画面で変えられる）
 - 方針：こくちーずのような自前のイベント掲示板＋申込フォームで新規集客（特に女子会）をする。申込は掲示板のフォームに一本化し、集客の窓口（こくちーず・公式サイト・SNS）からはリンクする。スタッフの手入力と、今のスプレッドシートからの1回だけの移行も受ける（`docs/requirements.md` の 1-2・1-3・決定事項）。受け付け・名寄せ・出禁チェックの設計は `docs/data-intake.md`
 - 最初に作る形式は女子会の見込み（ヒアリングで確認中）
@@ -41,6 +41,7 @@ make test      # テスト（tests/*Test.php。DBを使わないものだけ）
 make db        # DB に SQL で入る
 make admin     # 管理画面のアカウントを作る（パスワード再設定は make admin-reset）
 make import-customers LIST=… RESPONSES=… [COMMIT=1]  # 今のスプレッドシートから顧客を移す（docs/migration.md）
+make import-banned LIST=… [COMMIT=1]                   # 出禁リストを移す（顧客のあとに）
 php bin/send-mails.php   # 前日リマインド・翌日お礼を送る（本番では cron で毎時。ローカルは MAIL_DRIVER=log で storage/mail/ に書く）
 ```
 
@@ -53,7 +54,7 @@ src/         PHP コード。App\ 名前空間 → src/ に対応（bootstrap.ph
   Auth.php / Csrf.php / Session.php  ログイン・CSRF・セッション
   Form.php       フォームの値の受け取り方（文字列・整数・日時・選択肢）
   Normalize.php  電話・メール・名前・フリガナ・SNSのそろえ方（名寄せ・出禁チェック・移行で共通）
-  Events.php / Customers.php / Registrations.php / Checkins.php / Expenses.php / Admins.php / Channels.php
+  Events.php / Customers.php / Registrations.php / Checkins.php / Expenses.php / Admins.php / Channels.php / Bans.php
                  テーブルごとのDB処理。定員判定・受付などトランザクションが要る処理はここに置く
   Applications.php  申込フォームの受け付け（入力の確認・名寄せ・出禁チェック・申込の作成）
   Settings.php / Mailer.php / MailTemplates.php / MailJobs.php  文言の設定とメール（送信・文面・定期送信）

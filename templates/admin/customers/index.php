@@ -7,6 +7,7 @@
     <div class="toolbar">
         <h1>顧客台帳 <span class="text-muted"><?= $total ?>人</span></h1>
         <span class="actions">
+            <a class="button" href="/admin/bans">出禁リスト</a>
             <a class="button" href="/admin/customers/duplicates">名寄せ</a>
             <a class="button button--primary" href="/admin/customers/new">登録</a>
         </span>

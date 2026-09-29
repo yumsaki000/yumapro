@@ -177,6 +177,10 @@ final class Applications
             }
             Customers::fillEmpty((int) $customer['id'], $values + ['first_channel' => $values['channel']]);
             $customerId = (int) $customer['id'];
+            if (Normalize::matchKey($customer['name']) !== Normalize::matchKey($values['name'])) {
+                // 台帳の名前と違う名前で申し込んだ（本人の改名か、連絡先を共有する別人か）。あとで見比べられるように残す
+                $answers = ['submitted_name' => $values['name']] + $answers;
+            }
         } else {
             $customerId = Customers::create($values + ['first_channel' => $values['channel'], 'line_name' => null, 'note' => null]);
         }

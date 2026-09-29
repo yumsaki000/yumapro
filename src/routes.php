@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Admin\AccountingController;
+use App\Admin\BansController;
 use App\Admin\ChannelsController;
 use App\Admin\CheckinController;
 use App\Admin\CustomersController;
@@ -101,6 +102,7 @@ $router->get('/admin', function (): void {
         'title' => '管理画面',
         'admin' => $admin,
         'upcoming' => Events::upcoming(5),
+        'pendingReviews' => count(App\Bans::pendingReviews()),
     ], 'admin/layout');
 });
 
@@ -119,6 +121,7 @@ $router->form('/admin/registrations/{id}/edit', [RegistrationsController::class,
 $router->post('/admin/registrations/{id}/cancel', [RegistrationsController::class, 'cancel']);
 $router->post('/admin/registrations/{id}/restore', [RegistrationsController::class, 'restore']);
 $router->post('/admin/registrations/{id}/prepaid', [RegistrationsController::class, 'prepaid']);
+$router->post('/admin/registrations/{id}/ban-check', [BansController::class, 'review']);
 
 // ── 当日受付 ─────────────────────────────────────────
 $router->get('/admin/events/{eventId}/checkin', [CheckinController::class, 'index']);
@@ -140,6 +143,10 @@ $router->post('/admin/customers/merge', [CustomersController::class, 'merge']);
 $router->get('/admin/customers/{id}', [CustomersController::class, 'show']);
 $router->form('/admin/customers/{id}/edit', [CustomersController::class, 'edit']);
 $router->post('/admin/customers/{id}/ban', [CustomersController::class, 'ban']);
+
+// ── 出禁リスト ─────────────────────────────────────────
+$router->get('/admin/bans', [BansController::class, 'index']);
+$router->form('/admin/bans/new', [BansController::class, 'create']);
 
 // ── 集計・設定・運営メンバー ─────────────────────────────
 $router->get('/admin/stats', [StatsController::class, 'index']);

@@ -127,22 +127,24 @@ final class CustomersController
 
     public static function ban(string $id): void
     {
-        Auth::requireAdmin();
+        $admin = Auth::requireAdmin();
         $customer = Customers::find((int) $id) ?? abort_not_found();
+        $back = RegistrationsController::back('/admin/customers/' . $customer['id']);
         if (Form::str($_POST, 'action') === 'unban') {
             Customers::unban((int) $customer['id']);
             Session::flash('notice', "「{$customer['name']}」の出禁を解除しました。");
         } else {
             $reason = Form::str($_POST, 'reason') ?: null;
-            if ($reason !== null && mb_strlen($reason) > 255) {
-                Session::flash('error', '理由は255文字までにしてください。');
-                redirect('/admin/customers/' . $customer['id']);
+            $note = rtrim(str_replace("\r\n", "\n", Form::raw($_POST, 'note'))) ?: null;
+            if (($reason !== null && mb_strlen($reason) > 255) || ($note !== null && mb_strlen($note) > 5000)) {
+                Session::flash('error', '理由は255文字、経緯は5000文字までにしてください。');
+                redirect($back);
                 return;
             }
-            Customers::ban((int) $customer['id'], $reason);
-            Session::flash('notice', "「{$customer['name']}」を出禁にしました。申込の手入力で警告が出ます。");
+            Customers::ban((int) $customer['id'], $reason, $note, (int) $admin['id']);
+            Session::flash('notice', "「{$customer['name']}」を出禁にしました。申込フォームと手入力で自動的に判定されます。");
         }
-        redirect('/admin/customers/' . $customer['id']);
+        redirect($back);
     }
 
     /** 名寄せ：from_ids の顧客を into_id にまとめる */

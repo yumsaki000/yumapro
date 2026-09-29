@@ -107,21 +107,32 @@ final class Customers
     /** @return array{string, array} */
     private static function searchCondition(string $q): array
     {
+        [$clause, $params] = self::searchClause($q);
+        return [$clause === '' ? '' : "WHERE {$clause}", $params];
+    }
+
+    /**
+     * 検索の条件（顧客テーブルの別名は c）。空の検索なら ['', []]。
+     *
+     * @return array{string, array}
+     */
+    public static function searchClause(string $q): array
+    {
         $q = trim($q);
         if ($q === '') {
             return ['', []];
         }
         if (preg_match('/\A[\d\-\s()+（）ー－―０-９]+\z/u', $q)) {
             $digits = Normalize::phone($q) ?? '';
-            return ['WHERE c.phone LIKE ?', ['%' . ltrim($digits, '0') . '%']];
+            return ['c.phone LIKE ?', ['%' . ltrim($digits, '0') . '%']];
         }
         if (str_contains($q, '@')) {
-            return ['WHERE c.email LIKE ?', ['%' . strtolower($q) . '%']];
+            return ['c.email LIKE ?', ['%' . strtolower($q) . '%']];
         }
         $key = Normalize::matchKey($q);
         $like = '%' . $key . '%';
         return [
-            "WHERE REPLACE(c.name, ' ', '') LIKE ? OR REPLACE(c.name_kana, ' ', '') LIKE ? OR c.sns_account LIKE ? OR c.line_name LIKE ?",
+            "(REPLACE(c.name, ' ', '') LIKE ? OR REPLACE(c.name_kana, ' ', '') LIKE ? OR c.sns_account LIKE ? OR c.line_name LIKE ?)",
             [$like, $like, $like, $like],
         ];
     }
@@ -265,14 +276,18 @@ final class Customers
         return $customer['mail_opt_in_at'] !== null && $customer['mail_opt_out_at'] === null;
     }
 
-    public static function ban(int $id, ?string $reason): void
+    /** 出禁にする。すでに出禁なら日時は最初のまま。理由・経緯は渡したものだけ更新する（null なら今の値を残す） */
+    public static function ban(int $id, ?string $reason, ?string $note = null, ?int $adminId = null, ?string $bannedAt = null): void
     {
-        Database::pdo()->prepare('UPDATE customers SET banned_at = NOW(), ban_reason = ? WHERE id = ?')->execute([$reason, $id]);
+        Database::pdo()->prepare(
+            'UPDATE customers SET banned_at = COALESCE(banned_at, ?, NOW()), ban_reason = COALESCE(?, ban_reason),
+                ban_note = COALESCE(?, ban_note), banned_by = COALESCE(banned_by, ?) WHERE id = ?'
+        )->execute([$bannedAt, $reason, $note, $adminId, $id]);
     }
 
     public static function unban(int $id): void
     {
-        Database::pdo()->prepare('UPDATE customers SET banned_at = NULL, ban_reason = NULL WHERE id = ?')->execute([$id]);
+        Database::pdo()->prepare('UPDATE customers SET banned_at = NULL, ban_reason = NULL, ban_note = NULL, banned_by = NULL WHERE id = ?')->execute([$id]);
     }
 
     /**

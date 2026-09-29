@@ -23,7 +23,7 @@ $optedIn = App\Customers::isMailOptedIn($customer);
         <dt>きっかけ</dt><dd><?= e($customer['first_channel'] ?? '—') ?></dd>
         <dt>案内メール</dt><dd><?= $optedIn ? '同意（' . e(fmt_dt($customer['mail_opt_in_at'])) . '）' : ($customer['mail_opt_out_at'] !== null ? '停止（' . e(fmt_dt($customer['mail_opt_out_at'])) . '）' : '未同意') ?></dd>
         <?php if ($customer['banned_at'] !== null): ?>
-            <dt>出禁</dt><dd><?= e(fmt_dt($customer['banned_at'])) ?><?= $customer['ban_reason'] !== null ? '：' . e($customer['ban_reason']) : '' ?></dd>
+            <dt>出禁</dt><dd><?= e(fmt_dt($customer['banned_at'])) ?><?= $customer['ban_reason'] !== null ? '：' . e($customer['ban_reason']) : '' ?><?php if ($customer['ban_note'] !== null): ?><br><pre class="plain text-muted"><?= e($customer['ban_note']) ?></pre><?php endif; ?></dd>
         <?php endif; ?>
         <?php if ($customer['legacy_no'] !== null): ?><dt>移行元の番号</dt><dd><?= (int) $customer['legacy_no'] ?></dd><?php endif; ?>
         <dt>登録日</dt><dd><?= e(fmt_dt($customer['created_at'], false)) ?></dd>
@@ -85,7 +85,7 @@ $optedIn = App\Customers::isMailOptedIn($customer);
 <section class="card">
     <h2>出禁</h2>
     <?php if ($customer['banned_at'] !== null): ?>
-        <p>この人は出禁です。申込の手入力で警告が出ます。</p>
+        <p>この人は出禁です。申込フォームでは電話・メール・SNSが一致するとキャンセル待ちに止まり、手入力では警告が出ます。<a href="/admin/bans">出禁リスト</a></p>
         <form method="post" action="/admin/customers/<?= $id ?>/ban" class="inline-form">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="unban">
@@ -96,8 +96,12 @@ $optedIn = App\Customers::isMailOptedIn($customer);
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="ban">
             <label class="form__field">
-                <span class="form__label">理由（運営向けのメモ）</span>
+                <span class="form__label">理由（短く）</span>
                 <input type="text" name="reason" maxlength="255">
+            </label>
+            <label class="form__field">
+                <span class="form__label">経緯・メモ（運営向け）</span>
+                <textarea name="note" rows="3"></textarea>
             </label>
             <button type="submit" class="button button--danger">出禁にする</button>
         </form>

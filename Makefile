@@ -1,6 +1,6 @@
 # よく使うコマンドのまとめ。`make` だけで一覧を表示する
 .DEFAULT_GOAL := help
-.PHONY: help setup up down restart logs db db-reset lint test admin admin-reset import-customers
+.PHONY: help setup up down restart logs db db-reset lint test admin admin-reset import-customers import-banned
 
 help: ## コマンド一覧
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-18s %s\n", $$1, $$2}'
@@ -45,3 +45,6 @@ admin-reset: ## 管理画面のパスワードを再設定する
 
 import-customers: ## 顧客の移行。LIST=声掛けリストのCSV RESPONSES=フォームの回答のCSV（書き込むときは COMMIT=1）
 	docker compose exec app php bin/import-customers.php "$(LIST)" $(if $(RESPONSES),"--responses=$(RESPONSES)") $(if $(COMMIT),--commit) $(if $(VERBOSE),--verbose)
+
+import-banned: ## 出禁リストの移行。LIST=出禁リストのCSV（書き込むときは COMMIT=1）
+	docker compose exec app php bin/import-banned.php "$(LIST)" $(if $(COMMIT),--commit) $(if $(VERBOSE),--verbose)

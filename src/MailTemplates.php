@@ -61,6 +61,50 @@ final class MailTemplates
         ];
     }
 
+    /**
+     * 運営への通知（申込フォームからの申込）。出禁に該当・要確認のときに送る。設定で「すべて」にもできる。
+     */
+    public static function notifyStaff(array $r): bool
+    {
+        $addresses = array_filter(array_map('trim', explode(',', Settings::get('staff_notify_email'))));
+        if ($addresses === []) {
+            return false;
+        }
+        $check = $r['ban_check'] ?? 'none';
+        if ($check === 'none' && Settings::get('staff_notify_all') !== '1') {
+            return false;
+        }
+        $base = rtrim((string) Config::get('APP_URL', ''), '/');
+        $head = match ($check) {
+            'confirmed' => '【出禁該当】',
+            'suspect' => '【要確認】',
+            default => '【申込】',
+        };
+        $subject = "{$head}{$r['event_title']}：{$r['customer_name']}";
+        $lines = [
+            "掲示板の申込フォームから申込がありました。",
+            '',
+            "■ イベント：{$r['event_title']}（" . fmt_dt($r['event_starts_at']) . '）',
+            "■ 名前：{$r['customer_name']}" . (!empty($r['customer_kana']) ? "（{$r['customer_kana']}）" : ''),
+            '■ 電話：' . ($r['customer_phone'] ?? '—'),
+            '■ メール：' . ($r['customer_email'] ?? '—'),
+            '■ 状態：' . (Registrations::STATUSES[$r['status']] ?? $r['status']),
+        ];
+        if ($check === 'confirmed') {
+            $lines[] = '■ 出禁チェック：電話・メール・SNSが出禁リストの人と一致しました。申込はキャンセル待ちに止めてあります（本人には普通のキャンセル待ちの案内だけ届いています）。';
+        } elseif ($check === 'suspect') {
+            $lines[] = '■ 出禁チェック：名前が出禁リストの人と同じです（連絡先は一致していません）。別人かどうか確認してください。';
+        }
+        $lines[] = '';
+        $lines[] = '確認・処理はこちら：';
+        $lines[] = "{$base}/admin/registrations/" . (int) $r['id'] . '/edit';
+        $ok = true;
+        foreach ($addresses as $to) {
+            $ok = Mailer::send($to, $subject, implode("\n", $lines), 'staff_notify', (int) $r['id'], (int) $r['customer_id']) && $ok;
+        }
+        return $ok;
+    }
+
     /** @param array<string, string> $vars */
     public static function fill(string $template, array $vars): string
     {

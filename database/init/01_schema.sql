@@ -124,7 +124,9 @@ CREATE TABLE customers (
     mail_opt_out_at DATETIME     NULL COMMENT '案内メールの配信を停止した日時',
     note            TEXT         NULL COMMENT '運営メモ',
     banned_at       DATETIME     NULL COMMENT '出禁にした日時（NULL なら出禁でない）',
-    ban_reason      VARCHAR(255) NULL COMMENT '出禁の理由（運営向け）',
+    ban_reason      VARCHAR(255) NULL COMMENT '出禁の理由（運営向け・短く）',
+    ban_note        TEXT         NULL COMMENT '出禁の経緯など（運営向け。証拠の画像は貼らず、要点や保管場所だけ）',
+    banned_by       INT UNSIGNED NULL COMMENT '出禁にした運営メンバー',
     access_token    VARCHAR(64)  NOT NULL COMMENT '個人専用URL用のランダム文字列',
     legacy_no       INT UNSIGNED NULL COMMENT '移行元（今のスプレッドシートの声掛けリスト）の番号',
     legacy_data     JSON         NULL COMMENT '移行元の行をそのまま（使い道が決まっていない列も失わないため）',
@@ -136,7 +138,9 @@ CREATE TABLE customers (
     KEY idx_customers_email (email),
     KEY idx_customers_phone (phone),
     KEY idx_customers_sns (sns_account),
-    KEY idx_customers_name_kana (name_kana)
+    KEY idx_customers_name_kana (name_kana),
+    KEY idx_customers_banned (banned_at),
+    CONSTRAINT fk_customers_banned_by FOREIGN KEY (banned_by) REFERENCES admins (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 取り込み履歴（今のスプレッドシートからの移行など、まとめて取り込んだ1回につき1行）
@@ -174,8 +178,8 @@ CREATE TABLE registrations (
     prepaid_at          DATETIME     NULL COMMENT '前払いの入金を確認した日時',
     channel             VARCHAR(50)  NULL COMMENT 'どこで知ったか（申込時の選択。channels.name）',
     entry_from          VARCHAR(30)  NULL COMMENT 'どの窓口のリンクから来たか（?from= の値。集客の集計用）',
-    ban_check           ENUM('none', 'suspect', 'confirmed') NOT NULL DEFAULT 'none'
-                        COMMENT '申込時の出禁チェック: 該当なし／名前だけ一致（要確認）／連絡先が一致（確定）',
+    ban_check           ENUM('none', 'suspect', 'confirmed', 'cleared') NOT NULL DEFAULT 'none'
+                        COMMENT '申込時の出禁チェック: 該当なし／名前だけ一致（要確認）／連絡先が一致（確定）／運営が確認して別人と判断',
     consented_at        DATETIME     NULL COMMENT '申込フォームで注意事項などに同意した日時',
     note                VARCHAR(255) NULL COMMENT '運営メモ',
     applied_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申込元での申込日時',

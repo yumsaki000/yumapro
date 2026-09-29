@@ -66,6 +66,9 @@ final class BoardController
                 $registration = $result['registration'];
                 if ($registration !== []) {
                     MailTemplates::sendConfirmation($registration);
+                    if (!$result['existing']) {
+                        MailTemplates::notifyStaff($registration);
+                    }
                 }
                 Session::flash('applied', json_encode([
                     'status' => $registration['status'] ?? 'applied',
