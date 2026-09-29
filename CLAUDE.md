@@ -1,7 +1,7 @@
-# MINATO DECK（MINATOイベント管理アプリ）
+# MINATO BRIDGE（MINATOイベント管理アプリ）
 
 MINATO のイベント（リトリート／女子会／自己啓発／合コン）の告知・申込・当日受付・会計を少人数で回すための Web アプリ。
-名前は船にちなみ、参加者向けの掲示板が **MINATO DECK**（甲板）、管理画面が **BRIDGE**（船橋）。`.env` の `APP_NAME` / `ADMIN_NAME` で変えられる。
+名前は **MINATO BRIDGE**（船橋。港の船の舵を取る場所。2026-09-29 Yumaさんが決定）。画面の見出しに出す名前は `.env` の `APP_NAME` で変えられる。
 要件・背景は `docs/requirements.md` が正。迷ったらまずそこを読む。
 
 ## やりとりのルール
@@ -57,8 +57,8 @@ src/         PHP コード。App\ 名前空間 → src/ に対応（bootstrap.ph
                  テーブルごとのDB処理。定員判定・受付などトランザクションが要る処理はここに置く
   Applications.php  申込フォームの受け付け（入力の確認・名寄せ・出禁チェック・申込の作成）
   Settings.php / Mailer.php / MailTemplates.php / MailJobs.php  文言の設定とメール（送信・文面・定期送信）
-  Admin/         管理画面（BRIDGE）の各画面の処理（URLごとに routes.php から呼ぶ）
-  Web/           参加者向け（DECK）の画面の処理：掲示板・申込フォーム・個人専用ページ
+  Admin/         管理画面の各画面の処理（URLごとに routes.php から呼ぶ）
+  Web/           参加者向けの画面の処理：掲示板・申込フォーム・個人専用ページ
   Migration/     今のスプレッドシートからの移行
 bin/         コマンドラインで使うもの（アカウント作成、移行）。Web には出ない
 tests/       テスト（依存なしの tests/run.php で流す）

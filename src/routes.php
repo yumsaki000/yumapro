@@ -24,7 +24,7 @@ use App\Web\MyPageController;
 
 $router = new Router();
 
-// ── 参加者向け：掲示板（DECK）と個人専用ページ ─────────────────
+// ── 参加者向け：掲示板と個人専用ページ ─────────────────────────
 $router->get('/', [BoardController::class, 'index']);
 $router->get('/e/{slug}', [BoardController::class, 'show']);
 $router->form('/e/{slug}/apply', [BoardController::class, 'apply']);

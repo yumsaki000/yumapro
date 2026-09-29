@@ -23,9 +23,8 @@ require APP_ROOT . '/src/helpers.php';
 
 Config::load(APP_ROOT . '/.env');
 
-// システムの名前（船にちなむ）。掲示板＝DECK（甲板：参加者が集まる場所）、管理画面＝BRIDGE（船橋：運営が舵を取る場所）
-define('APP_NAME', (string) Config::get('APP_NAME', 'MINATO DECK'));
-define('ADMIN_NAME', (string) Config::get('ADMIN_NAME', 'BRIDGE'));
+// システムの名前：MINATO BRIDGE（船橋。港（MINATO）の船の舵を取る場所。2026-09-29 決定）
+define('APP_NAME', (string) Config::get('APP_NAME', 'MINATO BRIDGE'));
 
 date_default_timezone_set('Asia/Tokyo');
 mb_internal_encoding('UTF-8');

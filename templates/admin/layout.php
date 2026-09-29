@@ -23,13 +23,13 @@ $flashError = App\Session::flash('error');
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title><?= e($title ?? '管理画面') ?> | <?= e(ADMIN_NAME) ?>（<?= e(APP_NAME) ?> 管理画面）</title>
+    <title><?= e($title ?? '管理画面') ?> | <?= e(APP_NAME) ?> 管理画面</title>
     <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body class="admin">
     <header class="admin-header">
         <div class="admin-header__inner">
-            <a class="admin-header__brand" href="/admin">⚓ <?= e(ADMIN_NAME) ?> <span class="admin-header__sub"><?= e(APP_NAME) ?> 管理画面</span></a>
+            <a class="admin-header__brand" href="/admin">⚓ <?= e(APP_NAME) ?> <span class="admin-header__sub">管理画面</span></a>
             <?php if ($admin !== null): ?>
                 <form class="admin-header__logout" method="post" action="/admin/logout">
                     <?= csrf_field() ?>

@@ -15,7 +15,7 @@ use App\Settings;
 use App\View;
 
 /**
- * 参加者向けの掲示板（DECK）：回の一覧・詳細・申込フォーム。
+ * 参加者向けの掲示板：回の一覧・詳細・申込フォーム。
  */
 final class BoardController
 {
