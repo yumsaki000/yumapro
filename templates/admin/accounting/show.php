@@ -8,7 +8,7 @@ $eventId = (int) $event['id'];
 <section class="card">
     <div class="toolbar">
         <h1>会計：<?= e($event['title']) ?></h1>
-        <a class="button button--small" href="/admin/events/<?= $eventId ?>">回の詳細</a>
+        <a class="button button--small" href="/admin/events/<?= $eventId ?>">イベントの詳細</a>
     </div>
     <p class="text-muted"><?= e(fmt_dt($event['starts_at'])) ?>　<?= e(App\Events::PAYMENT_TIMINGS[$event['payment_timing']] ?? '') ?>　参加費 <?= e(yen($event['fee'])) ?></p>
     <div class="stats">

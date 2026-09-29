@@ -37,7 +37,7 @@ final class EventsController
         $admin = Auth::requireAdmin();
         $scope = Form::choice($_GET, 'scope', ['upcoming', 'past'], 'upcoming');
         echo View::render('admin/events/index', [
-            'title' => '回の一覧',
+            'title' => 'イベント一覧',
             'admin' => $admin,
             'scope' => $scope,
             'events' => Events::list($scope),
@@ -74,9 +74,9 @@ final class EventsController
         }
 
         echo View::render('admin/events/form', [
-            'title' => '新しい回',
+            'title' => '新しいイベント',
             'admin' => $admin,
-            'heading' => '新しい回',
+            'heading' => '新しいイベント',
             'action' => '/admin/events/new',
             'types' => $types,
             'values' => $values,
@@ -135,7 +135,7 @@ final class EventsController
         echo View::render('admin/events/form', [
             'title' => $event['title'] . ' の編集',
             'admin' => $admin,
-            'heading' => '回の編集',
+            'heading' => 'イベントの編集',
             'action' => '/admin/events/' . $event['id'] . '/edit',
             'types' => $types,
             'values' => $values,

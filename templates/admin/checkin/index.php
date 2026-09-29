@@ -11,7 +11,7 @@ $back = '/admin/events/' . $eventId . '/checkin' . ($q !== '' ? '?q=' . rawurlen
 <section class="card">
     <div class="toolbar">
         <h1>当日受付</h1>
-        <a class="button button--small" href="/admin/events/<?= $eventId ?>">回の詳細</a>
+        <a class="button button--small" href="/admin/events/<?= $eventId ?>">イベントの詳細</a>
     </div>
     <p class="text-muted"><?= e($event['title']) ?>　<?= e(fmt_dt($event['starts_at'])) ?>　<?= e(App\Events::PAYMENT_TIMINGS[$event['payment_timing']] ?? '') ?></p>
     <div class="stats">

@@ -216,7 +216,7 @@ final class Registrations
         $stmt->execute([$eventId]);
         $event = $stmt->fetch() ?: null;
         if ($event === null) {
-            throw new \RuntimeException('回がありません');
+            throw new \RuntimeException('イベントがありません');
         }
         return $event;
     }

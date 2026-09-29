@@ -1,7 +1,7 @@
 <?php
 /**
- * 回の作成・編集。こくちーずに載せる感覚で、上から順に埋めれば回のページができるように並べる。
- * 掲載する内容はどれも任意（空欄なら回のページに出ない）。
+ * イベントの作成・編集。こくちーずに載せる感覚で、上から順に埋めればイベントページができるように並べる。
+ * 掲載する内容はどれも任意（空欄ならイベントページに出ない）。
  *
  * @var string $heading
  * @var string $action
@@ -10,7 +10,7 @@
  * @var list<string> $errors
  * @var array|null $event 編集のとき
  * @var list<array{id: int, name: string}> $photos 表紙のほかの写真
- * @var array $latest 形式ごとの一番新しい回（新規のとき「前の回をもとに作る」に出す）
+ * @var array $latest 形式ごとの一番新しいイベント（新規のとき「前回のイベントをもとに作る」に出す）
  */
 $v = fn (string $key) => e($values[$key] ?? '');
 $isNew = $event === null;
@@ -19,7 +19,7 @@ $steps = ['basic' => '基本', 'photos' => '写真', 'content' => '掲載する�
 ?>
 <?php if ($isNew && $latest !== []): ?>
     <section class="card">
-        <h2>前の回をもとに作る（おすすめ）</h2>
+        <h2>前回のイベントをもとに作る（おすすめ）</h2>
         <p class="text-muted">同じ形式の前回の内容（説明・写真・料金など）をそのまま写して、下書きを作ります。日時と変わるところだけ直せば完成です。</p>
         <ul class="base-list">
             <?php foreach ($latest as $base): ?>
@@ -32,7 +32,7 @@ $steps = ['basic' => '基本', 'photos' => '写真', 'content' => '掲載する�
                 </li>
             <?php endforeach; ?>
         </ul>
-        <p class="text-muted small">ほかの回をもとにするときは、回の画面の「複製」から。白紙から作るときは、下のフォームに入れてください。</p>
+        <p class="text-muted small">ほかのイベントをもとにするときは、そのイベントの画面の「複製」から。白紙から作るときは、下のフォームに入れてください。</p>
     </section>
 <?php endif; ?>
 
@@ -85,7 +85,7 @@ $steps = ['basic' => '基本', 'photos' => '写真', 'content' => '掲載する�
 
         <h2 class="step" id="step-photos"><span>2</span>写真</h2>
         <div class="form__field">
-            <span class="form__label">表紙の写真（一覧のカードと回のページの一番上）</span>
+            <span class="form__label">表紙の写真（一覧のカードとイベントページの一番上）</span>
             <?php if (!$isNew && $event['photo'] !== null): ?>
                 <img class="photo-preview" src="<?= e(App\Photos::url($event['photo'])) ?>" alt="">
                 <label class="form__check"><input type="checkbox" name="remove_photo" value="1"> <span>表紙の写真を消す</span></label>
@@ -94,7 +94,7 @@ $steps = ['basic' => '基本', 'photos' => '写真', 'content' => '掲載する�
             <span class="form__help">スマホの写真をそのまま選べます（8MBまで。自動で縮めます）。ないときは形式の色で埋めます</span>
         </div>
         <div class="form__field">
-            <span class="form__label">そのほかの写真（回のページに並べる。<?= App\Events::MAX_GALLERY ?>枚まで）</span>
+            <span class="form__label">そのほかの写真（イベントページに並べる。<?= App\Events::MAX_GALLERY ?>枚まで）</span>
             <?php if ($photos !== []): ?>
                 <div class="photo-manage">
                     <?php foreach ($photos as $photo): ?>
@@ -114,7 +114,7 @@ $steps = ['basic' => '基本', 'photos' => '写真', 'content' => '掲載する�
             <?php endif; ?>
         </div>
 
-        <h2 class="step" id="step-content"><span>3</span>掲載する内容 <small>どれも任意。空欄の欄は回のページに出ません</small></h2>
+        <h2 class="step" id="step-content"><span>3</span>掲載する内容 <small>どれも任意。空欄の欄はイベントページに出ません</small></h2>
         <p class="form__help">
             <button type="button" class="button button--small" id="fill-template">ひな形を入れる</button>
             空いている欄に、書き方の見本（こくちーずの掲載ページと同じ流れ）を入れます
@@ -122,7 +122,7 @@ $steps = ['basic' => '基本', 'photos' => '写真', 'content' => '掲載する�
         <label class="form__field">
             <span class="form__label">一言紹介</span>
             <textarea name="summary" rows="3" maxlength="300" data-counter="summary-count" placeholder="例：価値観カードで自分の「好き」や「大切」を言葉にする女子会。手作りお菓子つき、少人数でゆったり。初参加・おひとり参加も歓迎です。"><?= $v('summary') ?></textarea>
-            <span class="form__help">一覧のカード・回のページの上・LINEなどで共有したときに出ます。<span id="summary-count"></span>（60〜120文字くらいがおすすめ）</span>
+            <span class="form__help">一覧のカード・イベントページの上・LINEなどで共有したときに出ます。<span id="summary-count"></span>（60〜120文字くらいがおすすめ）</span>
         </label>
         <div class="form__field">
             <label class="form__label" for="highlights">安心ポイント・特徴（1行に1つ）</label>
@@ -159,7 +159,7 @@ $steps = ['basic' => '基本', 'photos' => '写真', 'content' => '掲載する�
             <input type="text" name="belongings" value="<?= $v('belongings') ?>" maxlength="300" placeholder="例：特にありません（手ぶらでOK）">
         </label>
         <details class="form__more"<?= trim((string) ($values['faq'] ?? '')) !== '' ? ' open' : '' ?>>
-            <summary>よくある質問をこの回だけ変える</summary>
+            <summary>よくある質問をこのイベントだけ変える</summary>
             <label class="form__field">
                 <span class="form__label">よくある質問（Q. と A. の行を交互に）</span>
                 <textarea name="faq" rows="6" placeholder="Q. 一人で参加しても大丈夫？&#10;A. はい、ほとんどの方が一人参加です。"><?= $v('faq') ?></textarea>
@@ -254,11 +254,11 @@ $steps = ['basic' => '基本', 'photos' => '写真', 'content' => '掲載する�
             <label class="form__field">
                 <span class="form__label">キャンセル期限（任意）</span>
                 <input type="datetime-local" name="cancel_deadline" value="<?= e(dt_input($values['cancel_deadline'] ?? null)) ?>">
-                <?php if ($isNew): ?><span class="form__help">前払いの回で空欄なら、開始の7日前を入れます</span><?php endif; ?>
+                <?php if ($isNew): ?><span class="form__help">前払いのイベントで空欄なら、開始の7日前を入れます</span><?php endif; ?>
             </label>
         </div>
         <label class="form__field">
-            <span class="form__label">キャンセル規定（この回だけ変えるとき）</span>
+            <span class="form__label">キャンセル規定（このイベントだけ変えるとき）</span>
             <textarea name="cancel_policy" rows="3" placeholder="空欄なら「設定」の共通のキャンセル規定を出します"><?= $v('cancel_policy') ?></textarea>
         </label>
 
@@ -299,7 +299,7 @@ $steps = ['basic' => '基本', 'photos' => '写真', 'content' => '掲載する�
 
     // ひな形：空いている欄にだけ、書き方の見本を入れる
     var templates = {
-        summary: '（どんな回かを1〜2文で。例：少人数でゆったり話せる女子会です。初参加・おひとり参加も歓迎です。）',
+        summary: '（どんなイベントかを1〜2文で。例：少人数でゆったり話せる女子会です。初参加・おひとり参加も歓迎です。）',
         highlights: '初参加歓迎\nおひとり参加歓迎\n強引な勧誘は一切なし',
         description: '（読む人が「自分のことだ」と思える問いかけを1〜2行）\n\n■ どんなイベント？\n（何をするか、どんな雰囲気か）\n\n■ 当日の進め方\n・\n・\n・\n\n■ 参加すると得られるもの\n・\n・',
         recommend: '（どんな人に来てほしいか）\n（1行に1つ）',

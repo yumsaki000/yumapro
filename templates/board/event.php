@@ -1,6 +1,6 @@
 <?php
 /**
- * 回のページ。こくちーずの掲載ページと同じ流れ（写真 → 一言紹介 → 安心ポイント → 基本情報 → 内容 → おすすめ →
+ * イベントページ。こくちーずの掲載ページと同じ流れ（写真 → 一言紹介 → 安心ポイント → 基本情報 → 内容 → おすすめ →
  * タイムスケジュール → よくある質問 → アクセス → キャンセル → 主催について → シェア）で並べる。
  *
  * @var array $event
@@ -64,7 +64,7 @@ $buttonLabel = $remaining === 0 ? 'キャンセル待ちで申し込む' : 'こ�
         <strong>プレビュー</strong>（いまの状態：<?= e(App\Events::STATUSES[$event['status']] ?? $event['status']) ?>）参加者にはこう見えます。申込ボタンはここでは押せません。
         <span class="preview-bar__links">
             <a href="/admin/events/<?= (int) $event['id'] ?>/edit">編集に戻る</a>
-            <a href="/admin/events/<?= (int) $event['id'] ?>">回の画面へ</a>
+            <a href="/admin/events/<?= (int) $event['id'] ?>">管理画面のイベントへ</a>
         </span>
     </div>
 <?php endif; ?>

@@ -69,7 +69,7 @@ $access = $values['access'] ?? 'crew';
             <label class="form__field"><span class="form__label">並び順（小さいほど上）</span><input type="number" name="sort_order" value="<?= (int) ($values['sort_order'] ?? 0) ?>" inputmode="numeric"></label>
         </details>
         <div class="form-actions">
-            <button type="submit" class="button button--primary"><?= $course === null ? '作って、回を追加する' : '保存する' ?></button>
+            <button type="submit" class="button button--primary"><?= $course === null ? '作って、講座の回を追加する' : '保存する' ?></button>
             <a class="button button--ghost" href="<?= $course === null ? '/admin/courses' : '/admin/courses/' . (int) $course['id'] ?>">戻る</a>
         </div>
     </form>

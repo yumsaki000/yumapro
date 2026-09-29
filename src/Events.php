@@ -32,7 +32,7 @@ final class Events
         'draft' => '掲示板に出ません。準備中はこれ',
         'open' => '掲示板に出て、申込を受け付けます',
         'closed' => '掲示板に出ますが、申込は受け付けません',
-        'done' => '開催が終わった回',
+        'done' => '開催が終わったイベント',
         'cancelled' => '中止。掲示板に出ません',
     ];
 
@@ -198,7 +198,7 @@ final class Events
     {
         $source = self::find($id);
         if ($source === null) {
-            throw new \RuntimeException('複製元の回がありません');
+            throw new \RuntimeException('複製元のイベントがありません');
         }
         $data = array_intersect_key($source, array_flip(self::FIELDS));
         $data['round_no'] = $source['round_no'] === null ? null : (int) $source['round_no'] + 1;

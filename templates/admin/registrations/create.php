@@ -28,7 +28,7 @@ $eventId = (int) $event['id'];
                 <?php if ($customer['banned_at'] !== null): ?><span class="badge badge--danger">出禁</span><?php endif; ?>
                 <div class="text-muted"><?= e(App\Customers::GENDERS[$customer['gender']] ?? '性別未設定') ?>・電話 <?= e($customer['phone'] ?? '—') ?>・メール <?= e($customer['email'] ?? '—') ?>　<a href="/admin/customers/<?= (int) $customer['id'] ?>" target="_blank">顧客の詳細</a></div>
                 <?php if ($existing !== null): ?>
-                    <p class="alert alert--error">この人はこの回にもう申し込んでいます（<?= e(App\Registrations::STATUSES[$existing['status']] ?? $existing['status']) ?>）。<a href="/admin/registrations/<?= (int) $existing['id'] ?>/edit">申込の詳細へ</a></p>
+                    <p class="alert alert--error">この人はこのイベントにもう申し込んでいます（<?= e(App\Registrations::STATUSES[$existing['status']] ?? $existing['status']) ?>）。<a href="/admin/registrations/<?= (int) $existing['id'] ?>/edit">申込の詳細へ</a></p>
                 <?php elseif ($customer['banned_at'] !== null): ?>
                     <div class="warning-box">
                         <strong>出禁の人です</strong><?= $customer['ban_reason'] !== null ? '：' . e($customer['ban_reason']) : '' ?>（<?= e(fmt_dt($customer['banned_at'], false)) ?>）

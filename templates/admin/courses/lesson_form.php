@@ -6,7 +6,7 @@
 ?>
 <section class="card">
     <p><a href="/admin/courses/<?= (int) $course['id'] ?>">← <?= e($course['title']) ?></a></p>
-    <h1>回の編集</h1>
+    <h1>講座の回の編集</h1>
     <?php if ($errors !== []): ?><div class="alert alert--error" role="alert"><ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
     <form method="post" action="/admin/lessons/<?= (int) $lesson['id'] ?>/edit" class="form">
         <?= csrf_field() ?>

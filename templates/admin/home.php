@@ -1,19 +1,19 @@
 <?php
 /** @var array $admin */
-/** @var array $upcoming これからの回（直近） */
+/** @var array $upcoming これからのイベント（直近） */
 /** @var int $pendingReviews 出禁チェックの確認待ち */
 /** @var int $pendingCrew クルーの申込 */
 /** @var int $pendingPurchases 講座の入金待ち */
 $menu = [
-    ['/admin/events', '回の一覧', '回の作成・複製、申込者の一覧、当日受付'],
+    ['/admin/events', 'イベント', 'イベントの作成・複製、申込者の一覧、当日受付'],
     ['/admin/customers', '顧客台帳', '顧客の検索、参加履歴、名寄せ'],
     ['/admin/bans', '出禁リスト', '出禁の登録・解除、申込時の判定の確認'],
     ['/admin/crew', 'クルー', '名簿、募集ページからの申込の承認'],
     ['/admin/courses', '講座・動画', '全員に公開・クルー専用・有料の講座、YouTube動画と説明、購入の入金確認'],
-    ['/admin/accounting', '会計', '回ごとの収入・経費・収支'],
+    ['/admin/accounting', '会計', 'イベントごとの収入・経費・収支'],
     ['/admin/stats', '集計', '窓口別・新規／リピート・男女の集客数'],
     ['/admin/settings', '設定', '掲示板・申込フォーム・メールの文言、選択肢'],
-    ['/admin/official-site', '公式サイトとの連携', '公式サイトのボタンのリンク先、回の一覧の埋め込みコード'],
+    ['/admin/official-site', '公式サイトとの連携', '公式サイトのボタンのリンク先、イベント一覧の埋め込みコード'],
 ];
 if ($admin['role'] === 'owner') {
     $menu[] = ['/admin/members', '運営メンバー', 'アカウントの追加・無効化・パスワード再設定'];
@@ -21,7 +21,7 @@ if ($admin['role'] === 'owner') {
 ?>
 <section class="card">
     <h1>ようこそ、<?= e($admin['display_name']) ?> さん</h1>
-    <p class="text-muted">参加者向けの掲示板：<a href="/" target="_blank"><?= e(rtrim((string) App\Config::get('APP_URL', ''), '/')) ?>/</a>（「募集中」の回が出ます）</p>
+    <p class="text-muted">参加者向けの掲示板：<a href="/" target="_blank"><?= e(rtrim((string) App\Config::get('APP_URL', ''), '/')) ?>/</a>（「募集中」のイベントが出ます）</p>
 
     <?php if ($pendingReviews > 0): ?>
         <p class="warning-box">出禁チェックで確認待ちの申込が <?= $pendingReviews ?>件あります。<a href="/admin/bans">出禁リストで確認する</a></p>
@@ -33,7 +33,7 @@ if ($admin['role'] === 'owner') {
         <p class="warning-box">講座の購入で入金待ちが <?= $pendingPurchases ?>件あります。<a href="/admin/purchases">確認する</a></p>
     <?php endif; ?>
     <?php if ($upcoming !== []): ?>
-        <h2>これからの回</h2>
+        <h2>これからのイベント</h2>
         <ul class="list">
             <?php foreach ($upcoming as $event): ?>
                 <li class="list__item">

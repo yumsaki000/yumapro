@@ -84,7 +84,7 @@
             <label class="form__field">
                 <span class="form__label">経緯・メモ（運営向け）</span>
                 <textarea name="note" rows="4"><?= e($values['note']) ?></textarea>
-                <span class="form__help">いつ・どの回で・何があったか。証拠の画像はここに貼らず、保管場所だけ書いてください</span>
+                <span class="form__help">いつ・どのイベントで・何があったか。証拠の画像はここに貼らず、保管場所だけ書いてください</span>
             </label>
             <div class="actions">
                 <button type="submit" class="button button--danger">出禁にする</button>

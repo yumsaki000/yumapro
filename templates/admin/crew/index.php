@@ -62,5 +62,5 @@ $tabs = ['active' => '加入中', 'applied' => '申込中', 'left' => '脱退', 
             </table>
         </div>
     <?php endif; ?>
-    <p class="text-muted" style="margin-top: 12px;">クルーの状態は、顧客の詳細の「クルー」から変えられます。加入中の人は、クルー料金のある回に申し込むと自動でクルー料金になります。</p>
+    <p class="text-muted" style="margin-top: 12px;">クルーの状態は、顧客の詳細の「クルー」から変えられます。加入中の人は、クルー料金のあるイベントに申し込むと自動でクルー料金になります。</p>
 </section>

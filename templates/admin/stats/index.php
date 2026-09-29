@@ -30,8 +30,8 @@ $pairs = fn (array $counts) => implode('、', array_map(fn ($k, $v) => "{$k} {$v
 </section>
 
 <section class="card">
-    <h2>回ごと（新しい順・30回まで）</h2>
-    <?php if ($events === []): ?><p class="text-muted">回がまだありません。</p><?php endif; ?>
+    <h2>イベントごと（新しい順・30件まで）</h2>
+    <?php if ($events === []): ?><p class="text-muted">イベントがまだありません。</p><?php endif; ?>
     <?php foreach ($events as $ev): ?>
         <div class="stat-row">
             <div class="list__title"><a href="/admin/events/<?= (int) $ev['id'] ?>"><?= e($ev['title']) ?></a> <span class="text-muted"><?= e(fmt_dt($ev['starts_at'], false)) ?></span></div>

@@ -5,7 +5,7 @@
 $admin = $admin ?? App\Auth::user();
 $path = current_path();
 $nav = [
-    ['/admin/events', '回'],
+    ['/admin/events', 'イベント'],
     ['/admin/customers', '顧客'],
     ['/admin/crew', 'クルー'],
     ['/admin/courses', '講座'],

@@ -4,15 +4,15 @@
 ?>
 <section class="card">
     <div class="toolbar">
-        <h1>回の一覧</h1>
-        <a class="button button--primary" href="/admin/events/new">新しい回</a>
+        <h1>イベント一覧</h1>
+        <a class="button button--primary" href="/admin/events/new">新しいイベント</a>
     </div>
     <div class="tabs">
         <a href="/admin/events?scope=upcoming" class="<?= $scope === 'upcoming' ? 'is-active' : '' ?>">これから</a>
-        <a href="/admin/events?scope=past" class="<?= $scope === 'past' ? 'is-active' : '' ?>">終わった回</a>
+        <a href="/admin/events?scope=past" class="<?= $scope === 'past' ? 'is-active' : '' ?>">終わったイベント</a>
     </div>
     <?php if ($events === []): ?>
-        <p class="text-muted"><?= $scope === 'past' ? '終わった回はまだありません。' : 'これからの回はまだありません。「新しい回」から作るか、終わった回を複製してください。' ?></p>
+        <p class="text-muted"><?= $scope === 'past' ? '終わったイベントはまだありません。' : 'これからのイベントはまだありません。「新しいイベント」から作るか、終わったイベントを複製してください。' ?></p>
     <?php endif; ?>
     <ul class="list">
         <?php foreach ($events as $event): ?>

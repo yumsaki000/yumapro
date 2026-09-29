@@ -43,7 +43,7 @@ $optedIn = App\Customers::isMailOptedIn($customer);
     <?php else: ?>
         <div class="table-wrap">
             <table class="table">
-                <thead><tr><th>回</th><th>状態</th><th class="num">参加費</th><th>入金</th><th>到着</th></tr></thead>
+                <thead><tr><th>イベント</th><th>状態</th><th class="num">参加費</th><th>入金</th><th>到着</th></tr></thead>
                 <tbody>
                     <?php foreach ($history as $r): ?>
                         <tr class="<?= $r['status'] === 'cancelled' ? 'is-muted' : '' ?>">
@@ -99,7 +99,7 @@ $optedIn = App\Customers::isMailOptedIn($customer);
         </div>
         <label class="form__field"><span class="form__label">メモ（連絡の希望など）</span><input type="text" name="crew_note" value="<?= e($customer['crew_note'] ?? '') ?>" maxlength="255"></label>
         <button type="submit" class="button">保存する</button>
-        <span class="form__help">「加入中」にすると、クルー料金のある回に申し込んだとき自動でクルー料金になり、クルー限定の講座が見られます</span>
+        <span class="form__help">「加入中」にすると、クルー料金のあるイベントに申し込んだとき自動でクルー料金になり、クルー限定の講座が見られます</span>
     </form>
 </section>
 

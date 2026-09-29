@@ -82,7 +82,7 @@ final class RegistrationsController
                 }
             } else {
                 if ($existing !== null) {
-                    $errors[] = 'この人はこの回にもう申し込んでいます。';
+                    $errors[] = 'この人はこのイベントにもう申し込んでいます。';
                 }
                 if ($customer['banned_at'] !== null && !Form::checked($_POST, 'confirm_ban')) {
                     $errors[] = 'この人は出禁です。それでも申し込むなら「出禁を確認したうえで申し込む」にチェックを入れてください。';

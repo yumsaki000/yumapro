@@ -12,7 +12,7 @@ $rid = (int) $r['id'];
         <div class="alert alert--error" role="alert"><ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
     <?php endif; ?>
     <dl class="kv">
-        <dt>回</dt><dd><a href="/admin/events/<?= (int) $r['event_id'] ?>"><?= e($r['event_title']) ?></a>　<?= e(fmt_dt($r['event_starts_at'])) ?></dd>
+        <dt>イベント</dt><dd><a href="/admin/events/<?= (int) $r['event_id'] ?>"><?= e($r['event_title']) ?></a>　<?= e(fmt_dt($r['event_starts_at'])) ?></dd>
         <dt>申込者</dt><dd><a href="/admin/customers/<?= (int) $r['customer_id'] ?>"><?= e($r['customer_name']) ?></a><?= $r['customer_kana'] !== null ? '（' . e($r['customer_kana']) . '）' : '' ?><?php if ($r['customer_banned_at'] !== null): ?> <span class="badge badge--danger">出禁</span><?php endif; ?></dd>
         <dt>状態</dt><dd><span class="<?= e(App\Registrations::STATUS_BADGES[$r['status']] ?? 'badge') ?>"><?= e(App\Registrations::STATUSES[$r['status']] ?? $r['status']) ?></span></dd>
         <dt>申込元</dt><dd><?= e(App\Registrations::SOURCES[$r['source']] ?? $r['source']) ?>　<?= e(fmt_dt($r['applied_at'])) ?></dd>

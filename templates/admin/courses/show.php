@@ -21,13 +21,13 @@ $id = (int) $course['id'];
     <div class="actions">
         <a class="button" href="/admin/courses/<?= $id ?>/edit">編集</a>
         <a class="button" href="/learn/<?= e($course['slug']) ?>" target="_blank">公開ページを見る</a>
-        <form class="inline-form" method="post" action="/admin/courses/<?= $id ?>/delete" onsubmit="return confirm('この講座と各回を消します。よろしいですか？');"><?= csrf_field() ?><button type="submit" class="button button--danger">消す</button></form>
+        <form class="inline-form" method="post" action="/admin/courses/<?= $id ?>/delete" onsubmit="return confirm('この講座と、講座の回をすべて消します。よろしいですか？');"><?= csrf_field() ?><button type="submit" class="button button--danger">消す</button></form>
     </div>
 </section>
 
 <section class="card" id="lessons">
-    <h2>各回（<?= count($lessons) ?>）</h2>
-    <?php if ($lessons === []): ?><p class="text-muted">まだ回がありません。下の「回を追加」から、YouTube の URL と説明を入れて追加してください。</p><?php else: ?>
+    <h2>講座の回（<?= count($lessons) ?>）</h2>
+    <?php if ($lessons === []): ?><p class="text-muted">まだ講座の回がありません。下の「講座の回を追加」から、YouTube の URL と説明を入れて追加してください。</p><?php else: ?>
         <p class="text-muted small">↑↓で順番を入れ替えられます。「お試し」の回は誰でも見られます。</p>
         <ul class="lesson-list">
             <?php foreach ($lessons as $i => $l): ?>
@@ -55,7 +55,7 @@ $id = (int) $course['id'];
 </section>
 
 <section class="card" id="add-lesson">
-    <h2>回を追加</h2>
+    <h2>講座の回を追加</h2>
     <?php if (($addErrors ?? []) !== []): ?>
         <div class="alert alert--error" role="alert"><ul><?php foreach ($addErrors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
     <?php endif; ?>

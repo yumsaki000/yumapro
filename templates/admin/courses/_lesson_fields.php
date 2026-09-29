@@ -11,7 +11,7 @@ $youtubeValue = $values['youtube_raw'] ?? (($values['youtube_id'] ?? null) !== n
 $preview = (int) ($values['is_preview'] ?? 0) === 1;
 ?>
 <label class="form__field">
-    <span class="form__label">回のタイトル <span class="req">必須</span></span>
+    <span class="form__label">講座の回のタイトル <span class="req">必須</span></span>
     <input type="text" name="title" value="<?= e($values['title'] ?? '') ?>" maxlength="200" required placeholder="例：第1回 自分のタイプを知ろう">
 </label>
 <label class="form__field">

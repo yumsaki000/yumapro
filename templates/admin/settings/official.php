@@ -22,7 +22,7 @@ $embedTop = '<div data-minato-events data-limit="3"></div>' . "\n" . '<script sr
     <p>公式サイトは <strong>MINATOを知る場所</strong>、このアプリ（MINATO BRIDGE）は <strong>イベントに参加する場所</strong> です。参加者から見ると、ロゴ・色・メニューが同じひとつのサイトに見えるようにしています。</p>
     <ul class="role-list">
         <li><strong>公式サイト</strong>：MINATOとは・代表挨拶・イベントの考え方・サービス・よくある質問・ブログ・会社概要・規約</li>
-        <li><strong>MINATO BRIDGE</strong>：イベント一覧と回のページ・申込・マイページ・クルーの申込・講座と動画</li>
+        <li><strong>MINATO BRIDGE</strong>：イベント一覧とイベントページ・申込・マイページ・クルーの申込・講座と動画</li>
     </ul>
     <p class="text-muted small">参加者向けの画面の名前・メニューに並べる公式サイトのページ・フッターのリンクは<a href="/admin/settings">設定</a>の「公式サイトとのつながり」で変えられます。</p>
 </section>
@@ -48,10 +48,10 @@ $embedTop = '<div data-minato-events data-limit="3"></div>' . "\n" . '<script sr
 </section>
 
 <section class="card">
-    <h2>2. 公式サイトのページに、回の一覧を出す（埋め込み）</h2>
-    <p class="text-muted">WordPress のページの編集で「カスタムHTML」のブロックを足し、次のコードを貼ります。回を登録・更新すると、公式サイト側も自動で変わります（公式サイトの手直しは不要）。</p>
+    <h2>2. 公式サイトのページに、イベント一覧を出す（埋め込み）</h2>
+    <p class="text-muted">WordPress のページの編集で「カスタムHTML」のブロックを足し、次のコードを貼ります。イベントを登録・更新すると、公式サイト側も自動で変わります（公式サイトの手直しは不要）。</p>
     <label class="form__field">
-        <span class="form__label">募集中の回をすべて出す（「イベントスケジュール」のページなどに）</span>
+        <span class="form__label">募集中のイベントをすべて出す（「イベントスケジュール」のページなどに）</span>
         <textarea id="embed-all" rows="3" readonly><?= e($embedAll) ?></textarea>
     </label>
     <button type="button" class="button button--small" data-copy-target="embed-all">コピー</button>
@@ -70,7 +70,7 @@ $embedTop = '<div data-minato-events data-limit="3"></div>' . "\n" . '<script sr
 
 <section class="card">
     <h2>3. 新着として出す（RSS）</h2>
-    <p class="text-muted">WordPress の「RSS」ブロックにこの URL を入れると、募集中の回が新着の一覧として出ます（コードを貼れないときに）。</p>
+    <p class="text-muted">WordPress の「RSS」ブロックにこの URL を入れると、募集中のイベントが新着の一覧として出ます（コードを貼れないときに）。</p>
     <p><code id="rss-url"><?= e($appUrl) ?>/feed.xml</code> <button type="button" class="button button--small" data-copy-target="rss-url">コピー</button></p>
 </section>
 
@@ -99,12 +99,12 @@ $embedTop = '<div data-minato-events data-limit="3"></div>' . "\n" . '<script sr
             </tbody>
         </table>
     </div>
-    <p class="text-muted small">回ごとのお知らせは、回の画面の「告知に使うリンクと文面」で貼る場所を「MINATO公式LINE」にすると、LINE 用のリンク入りの文面ができます。</p>
+    <p class="text-muted small">イベントごとのお知らせは、イベントの画面の「告知に使うリンクと文面」で貼る場所を「MINATO公式LINE」にすると、LINE 用のリンク入りの文面ができます。</p>
 </section>
 
 <section class="card">
     <h2>5. こくちーず・SNS から</h2>
-    <p class="text-muted">こくちーずは「掲載」だけに使い、申込は回のページに集めます。回の画面の「告知に使うリンクと文面」から、こくちーず用・Instagram 用のリンク入りの告知文をコピーできます。</p>
+    <p class="text-muted">こくちーずは「掲載」だけに使い、申込はイベントページに集めます。イベントの画面の「告知に使うリンクと文面」から、こくちーず用・Instagram 用のリンク入りの告知文をコピーできます。</p>
 </section>
 
 <script>

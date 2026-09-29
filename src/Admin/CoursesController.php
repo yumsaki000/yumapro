@@ -38,7 +38,7 @@ final class CoursesController
             [$values, $errors] = self::read($_POST);
             if ($errors === []) {
                 $id = Courses::create($values, (int) $admin['id']);
-                Session::flash('notice', "講座「{$values['title']}」を作りました。次に各回を追加してください。");
+                Session::flash('notice', "講座「{$values['title']}」を作りました。次に講座の回（第1回・第2回…）を追加してください。");
                 redirect('/admin/courses/' . $id);
                 return;
             }
@@ -113,7 +113,7 @@ final class CoursesController
             return;
         }
         Courses::addLesson((int) $course['id'], $values);
-        Session::flash('notice', "「{$values['title']}」を追加しました。続けて次の回も追加できます。");
+        Session::flash('notice', "「{$values['title']}」を追加しました。続けて講座の次の回も追加できます。");
         redirect('/admin/courses/' . $course['id'] . '#add-lesson');
     }
 
@@ -243,7 +243,7 @@ final class CoursesController
             'sort_order' => is_int($sortOrder) ? $sortOrder : null,
         ];
         if ($values['title'] === '' || mb_strlen($values['title']) > 200) {
-            $errors[] = '回のタイトルは1〜200文字で入れてください。';
+            $errors[] = '講座の回のタイトルは1〜200文字で入れてください。';
         }
         if ($values['body'] !== null && mb_strlen($values['body']) > 20000) {
             $errors[] = '本文は20000文字までにしてください。';

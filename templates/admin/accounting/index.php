@@ -4,11 +4,11 @@ $sum = fn (string $key) => array_sum(array_map(fn ($r) => (int) $r[$key], $rows)
 ?>
 <section class="card">
     <h1>会計</h1>
-    <p class="text-muted">収入 ＝ 前払いの入金確認済みの参加費 ＋ 当日受付の入金。収支 ＝ 収入 − 経費 − 主催分。中止の回は除いています。</p>
-    <?php if ($rows === []): ?><p>回がまだありません。</p><?php endif; ?>
+    <p class="text-muted">収入 ＝ 前払いの入金確認済みの参加費 ＋ 当日受付の入金。収支 ＝ 収入 − 経費 − 主催分。中止のイベントは除いています。</p>
+    <?php if ($rows === []): ?><p>イベントがまだありません。</p><?php endif; ?>
     <div class="table-wrap">
         <table class="table">
-            <thead><tr><th>回</th><th>日付</th><th class="num">収入</th><th class="num">経費</th><th class="num">主催分</th><th class="num">収支</th></tr></thead>
+            <thead><tr><th>イベント</th><th>日付</th><th class="num">収入</th><th class="num">経費</th><th class="num">主催分</th><th class="num">収支</th></tr></thead>
             <tbody>
                 <?php foreach ($rows as $r): ?>
                     <tr>

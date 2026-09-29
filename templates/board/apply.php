@@ -18,7 +18,7 @@ $checked = fn (string $key) => !empty($raw[$key]) ? ' checked' : '';
     <h1>お申込み</h1>
     <p><strong><?= e($event['title']) ?></strong><br><?= e(fmt_dt($event['starts_at'])) ?>　参加費 <?= e(yen($event['fee'])) ?></p>
     <?php if ($remaining === 0): ?>
-        <p class="alert alert--info">この回は満席のため、キャンセル待ちでのお申込みになります。空きが出たらメールでご連絡します。</p>
+        <p class="alert alert--info">このイベントは満席のため、キャンセル待ちでのお申込みになります。空きが出たらメールでご連絡します。</p>
     <?php endif; ?>
     <?php if ($errors !== []): ?>
         <div class="alert alert--error" role="alert"><ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>

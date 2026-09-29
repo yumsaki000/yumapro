@@ -52,7 +52,7 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
         </form>
     </div>
 
-    <form method="post" action="/admin/events/<?= $id ?>/status" class="actions" style="margin-top: 12px;" onsubmit="return this.status.value !== 'cancelled' || confirm('この回を中止にします。よろしいですか？');">
+    <form method="post" action="/admin/events/<?= $id ?>/status" class="actions" style="margin-top: 12px;" onsubmit="return this.status.value !== 'cancelled' || confirm('このイベントを中止にします。よろしいですか？');">
         <?= csrf_field() ?>
         <label>状態を変える：
             <select name="status">
