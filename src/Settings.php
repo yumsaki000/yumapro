@@ -90,7 +90,7 @@ MINATOクルーへようこそ！本日からクルーとしてご参加いた�
         'bank_account' => ['振込先', '前払いのイベントの確認メールに入る（{bank_account}）。ここにだけ書き、ほかの資料には書かない', '', true],
         // ── メール ──
         'mail_from_name' => ['差出人の名前', 'メールの From に出る名前', 'MINATO', false],
-        'mail_from_address' => ['差出人のメールアドレス', '空欄なら noreply@（このサイトのドメイン）。迷惑メール扱いを避けるため、このサーバーのドメインのアドレスにする', '', false],
+        'mail_from_address' => ['差出人のメールアドレス', 'サーバーパネルで作った minatocrew.com のアドレス。Gmail のアドレスにすると迷惑メールになりやすい', 'event@minatocrew.com', false],
         'mail_signature' => ['メールの署名', 'すべてのメールの末尾', "――――――――――\nMINATO\n{contact_text}\n{official_line_url}", true],
         'mail_confirm_subject' => ['確認メール：件名', '申込を受け付けたとき', '【MINATO】お申込みを受け付けました：{event_title}', false],
         'mail_confirm_body' => ['確認メール：本文', '使える言葉：{name} {event_title} {event_datetime} {venue} {venue_address} {venue_url} {fee} {payment} {bank_account} {cancel_policy} {cancel_deadline} {my_url}',
