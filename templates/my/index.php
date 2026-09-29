@@ -6,6 +6,9 @@
 /** @var bool $optedIn */
 /** @var string $bankAccount */
 /** @var string $contact */
+/** @var ?string $referralCode 友だち招待のリンク（使わない設定なら null） */
+/** @var string $referralText */
+/** @var int $referralCount */
 $statusLabel = fn (array $r) => match ($r['status']) {
     'applied' => $r['event_payment_timing'] === 'prepaid' && $r['prepaid_at'] === null ? 'お申込み済み（お振込み待ち）' : 'お申込み済み',
     'waitlisted' => 'キャンセル待ち',
@@ -37,8 +40,11 @@ $statusLabel = fn (array $r) => match ($r['status']) {
                     <?php if ($r['event_cancel_deadline'] !== null): ?><dt>キャンセル期限</dt><dd><?= e(fmt_dt($r['event_cancel_deadline'])) ?></dd><?php endif; ?>
                 </dl>
             <?php endif; ?>
+            <?php if ($referralCode !== null && $r['status'] === 'applied'): ?>
+                <p style="margin: 8px 0 0;"><button type="button" class="button button--small" data-invite="<?= e(app_url('/e/' . $r['event_slug'] . '?ref=' . $referralCode)) ?>" data-invite-text="<?= e($r['event_title'] . ' に一緒に行きませんか？') ?>">このイベントに友だちを誘う</button></p>
+            <?php endif; ?>
             <?php if ($r['cancellable']): ?>
-                <form method="post" action="/my/<?= e($token) ?>/cancel/<?= (int) $r['id'] ?>" style="margin-top: 8px;" onsubmit="return confirm('「<?= e($r['event_title']) ?>」のお申込みをキャンセルします。よろしいですか？');">
+                <form method="post" action="/my/<?= e($token) ?>/cancel/<?= (int) $r['id'] ?>" style="margin-top: 8px;" data-confirm="「<?= e($r['event_title']) ?>」のお申込みをキャンセルします。よろしいですか？" onsubmit="return confirm(this.dataset.confirm);">
                     <?= csrf_field() ?>
                     <button type="submit" class="button button--small button--danger">キャンセルする</button>
                 </form>
@@ -66,6 +72,25 @@ $statusLabel = fn (array $r) => match ($r['status']) {
     <?php endif; ?>
 </section>
 
+<?php if ($referralCode !== null): ?>
+    <?php $inviteUrl = app_url('/?ref=' . $referralCode); ?>
+    <section class="card invite">
+        <h2>友だちを招待する</h2>
+        <p><?= nl2br(e($referralText)) ?></p>
+        <div class="form">
+            <label class="form__field">
+                <span class="form__label">あなたの招待リンク</span>
+                <input type="text" readonly value="<?= e($inviteUrl) ?>" onclick="this.select()">
+            </label>
+        </div>
+        <div class="actions" style="margin-top: 12px;">
+            <button type="button" class="button button--primary button--small" data-invite="<?= e($inviteUrl) ?>" data-invite-text="<?= e(App\Settings::get('public_name') . ' のイベント、一緒に行きませんか？') ?>">リンクを送る・コピー</button>
+            <a class="button button--small" href="https://line.me/R/share?text=<?= e(rawurlencode(App\Settings::get('public_name') . ' のイベント、一緒に行きませんか？' . "\n" . $inviteUrl)) ?>" target="_blank" rel="noopener">LINEで送る</a>
+        </div>
+        <?php if ($referralCount > 0): ?><p class="text-muted small">これまでに <?= (int) $referralCount ?>人があなたのリンクから申し込みました。ありがとうございます。</p><?php endif; ?>
+    </section>
+<?php endif; ?>
+
 <section class="card">
     <h2>イベントの案内メール</h2>
     <form method="post" action="/my/<?= e($token) ?>/mail" class="form">
@@ -75,3 +100,18 @@ $statusLabel = fn (array $r) => match ($r['status']) {
     </form>
     <p class="text-muted" style="margin-top: 16px;"><?= nl2br(e($contact)) ?></p>
 </section>
+<script>
+// 招待リンク：スマホでは共有メニュー、使えなければコピー
+document.querySelectorAll('[data-invite]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var url = btn.dataset.invite, text = btn.dataset.inviteText || '';
+        if (navigator.share) {
+            navigator.share({ title: text, text: text, url: url }).catch(function () {});
+            return;
+        }
+        (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () {
+            btn.textContent = 'リンクをコピーしました';
+        }, function () { window.prompt('このリンクをコピーしてください', url); });
+    });
+});
+</script>

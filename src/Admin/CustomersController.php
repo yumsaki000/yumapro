@@ -6,6 +6,8 @@ namespace App\Admin;
 
 use App\Auth;
 use App\Channels;
+use App\Crew;
+use App\Csv;
 use App\Customers;
 use App\Form;
 use App\Registrations;
@@ -29,6 +31,44 @@ final class CustomersController
             'result' => Customers::search($q, is_int($page) ? $page : 1),
             'total' => Customers::count(),
         ], 'admin/layout');
+    }
+
+    /**
+     * 顧客台帳を CSV で書き出す。全員の連絡先が入るので、オーナーだけにする。
+     * 書き出したファイルは運営の中だけで扱い、使い終わったら消す（docs/admin-guide.md）
+     */
+    public static function csv(): void
+    {
+        Auth::requireOwner();
+        $rows = (function () {
+            foreach (Customers::exportRows() as $c) {
+                yield [
+                    (int) $c['id'],
+                    $c['name'],
+                    $c['name_kana'],
+                    Csv::phone($c['phone']),
+                    $c['email'],
+                    $c['sns_account'],
+                    Customers::GENDERS[$c['gender'] ?? ''] ?? '',
+                    $c['line_name'],
+                    $c['first_channel'],
+                    Customers::isMailOptedIn($c) ? '受け取る' : ($c['mail_opt_out_at'] !== null ? '停止' : ''),
+                    $c['crew_status'] !== 'none' ? (Crew::STATUSES[$c['crew_status']] ?? $c['crew_status']) : '',
+                    (int) $c['registration_count'],
+                    (int) $c['attended_count'],
+                    (int) $c['no_show_count'],
+                    $c['last_event_at'] !== null ? date('Y-m-d', strtotime((string) $c['last_event_at'])) : '',
+                    $c['banned_at'] !== null ? '出禁' : '',
+                    $c['ban_reason'],
+                    $c['note'],
+                    date('Y-m-d', strtotime((string) $c['created_at'])),
+                ];
+            }
+        })();
+        Csv::download('顧客台帳_' . date('Ymd') . '.csv', [
+            '番号', '名前', 'フリガナ', '電話', 'メール', 'SNS（@なし）', '性別', 'LINEの名前', '最初のきっかけ', '案内メール', 'クルー',
+            '申込', '参加（到着）', '無断キャンセル', '最後のイベント', '出禁', '出禁の理由', 'メモ', '登録日',
+        ], $rows);
     }
 
     public static function create(): void
@@ -81,6 +121,7 @@ final class CustomersController
             'admin' => $admin,
             'customer' => $customer,
             'history' => Registrations::forCustomer((int) $customer['id']),
+            'referred' => Registrations::referredBy((int) $customer['id']),
             'candidates' => Customers::findCandidates($customer, (int) $customer['id']),
             'legacy' => is_array($legacy) ? $legacy : [],
         ], 'admin/layout');

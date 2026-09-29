@@ -25,6 +25,7 @@ final class BoardController
 {
     public static function index(): void
     {
+        self::rememberReferral();
         $types = Events::publicTypes();
         $type = is_string($_GET['type'] ?? null) && isset($types[$_GET['type']]) ? $_GET['type'] : null;
         $from = Applications::entryFrom($_GET['from'] ?? null);
@@ -47,6 +48,7 @@ final class BoardController
 
     public static function show(string $slug): void
     {
+        self::rememberReferral();
         self::render(self::findPublic($slug), false);
     }
 
@@ -177,6 +179,7 @@ final class BoardController
 
     public static function apply(string $slug): void
     {
+        self::rememberReferral();
         $event = self::findPublic($slug);
         if (!Applications::accepting($event)) {
             redirect('/e/' . $event['slug']);
@@ -186,6 +189,16 @@ final class BoardController
         $values = ['name' => '', 'name_kana' => '', 'email' => '', 'phone' => '', 'sns_account' => '', 'gender' => '', 'channel' => '', 'mail_opt_in' => false];
         $raw = [];
         $errors = [];
+        $channels = Channels::activeNames();
+        if (!is_post() && self::referralFromSession() !== null) {
+            // 友だち招待のリンクから来た人は、「どこで知りましたか」を最初から「紹介」にしておく
+            foreach ($channels as $channel) {
+                if (str_contains($channel, '紹介')) {
+                    $values['channel'] = $channel;
+                    break;
+                }
+            }
+        }
 
         if (is_post()) {
             // ロボット避け：見えない欄に何か入っていたら、受け付けたふりをして終える
@@ -196,7 +209,7 @@ final class BoardController
             ['values' => $values, 'answers' => $answers, 'errors' => $errors] = Applications::validate($event, $_POST);
             $raw = $_POST;
             if ($errors === []) {
-                $result = Applications::submit($event, $values, $answers, $from);
+                $result = Applications::submit($event, $values, $answers, $from, self::referralFromSession());
                 $registration = $result['registration'];
                 if ($registration !== []) {
                     MailTemplates::sendConfirmation($registration);
@@ -222,7 +235,7 @@ final class BoardController
             'raw' => $raw,
             'errors' => $errors,
             'from' => $from,
-            'channels' => Channels::activeNames(),
+            'channels' => $channels,
             'extraFields' => Applications::extraFields($event),
             'needsGender' => Applications::needsGender($event),
             'remaining' => Applications::remaining($event),
@@ -246,6 +259,23 @@ final class BoardController
             'contact' => Settings::get('contact_text'),
             'lineUrl' => Settings::get('official_line_url'),
         ]);
+    }
+
+    /** 友だち招待のリンク（?ref=）から来たら、申込のときまで覚えておく */
+    private static function rememberReferral(): void
+    {
+        $code = $_GET['ref'] ?? null;
+        if (Customers::isReferralCode($code)) {
+            Session::start();
+            $_SESSION['_ref'] = $code;
+        }
+    }
+
+    private static function referralFromSession(): ?string
+    {
+        Session::start();
+        $code = $_SESSION['_ref'] ?? null;
+        return Customers::isReferralCode($code) ? $code : null;
     }
 
     private static function findPublic(string $slug): array

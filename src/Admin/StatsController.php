@@ -21,6 +21,7 @@ final class StatsController
             'admin' => $admin,
             'events' => Stats::perEvent(30),
             'monthly' => Stats::monthly(12),
+            'referrers' => Stats::referrers(10),
         ], 'admin/layout');
     }
 }

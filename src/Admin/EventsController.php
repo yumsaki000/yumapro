@@ -8,6 +8,10 @@ use App\Auth;
 use App\Events;
 use App\Form;
 use App\Config;
+use App\Csv;
+use App\Follows;
+use App\Settings;
+use App\Stats;
 use App\Photos;
 use App\Registrations;
 use App\Session;
@@ -98,7 +102,78 @@ final class EventsController
             'registrations' => Registrations::forEvent((int) $event['id']),
             'survey' => Surveys::summaryForEvent((int) $event['id']),
             'baseUrl' => rtrim((string) Config::get('APP_URL', ''), '/'),
+            'followEnabled' => Settings::get('follow_enabled') === '1',
+            'followCount' => (int) (Follows::countsByType()[(int) $event['event_type_id']] ?? 0),
+            'notArrived' => Registrations::countNotArrived((int) $event['id']),
         ], 'admin/layout');
+    }
+
+    /**
+     * 開催が済んだイベントで、到着の記録がない申込をまとめて無断キャンセルにする。
+     * 当日受付を使ったイベント（到着が1人以上）だけ。使っていないと全員に付いてしまうため
+     */
+    public static function markNoShows(string $id): void
+    {
+        Auth::requireAdmin();
+        $event = Events::find((int) $id) ?? abort_not_found();
+        if (strtotime((string) $event['starts_at']) > time()) {
+            Session::flash('error', '開催の前は、まとめて無断キャンセルにできません。');
+        } elseif ((int) $event['arrived_count'] === 0) {
+            Session::flash('error', '当日受付の記録がないため、まとめては付けられません。来なかった人の「無断キャンセル」を1人ずつ押してください。');
+        } else {
+            $count = Registrations::markNoShows((int) $event['id']);
+            Session::flash('notice', "到着の記録がない {$count}人を無断キャンセルにしました。連絡があった人は「外す」で戻せます。");
+        }
+        redirect('/admin/events/' . (int) $event['id']);
+    }
+
+    /** 申込者の一覧を CSV で書き出す（受付表の印刷や、ほかの表計算で使うとき） */
+    public static function registrationsCsv(string $id): void
+    {
+        Auth::requireAdmin();
+        $event = Events::find((int) $id) ?? abort_not_found();
+        $registrations = Registrations::forEvent((int) $event['id']);
+        $answerKeys = [];
+        foreach ($registrations as $r) {
+            $answers = $r['answers'] !== null ? json_decode((string) $r['answers'], true) : null;
+            foreach (is_array($answers) ? array_keys($answers) : [] as $key) {
+                $answerKeys[$key] = true;
+            }
+        }
+        $answerLabels = ['submitted_name' => '申込時に入力した名前', 'referrer' => '紹介者（記入）', 'message' => '意気込み', 'questions' => '質問・不安'];
+        $header = ['名前', 'フリガナ', '性別', '電話', 'メール', '状態', '参加費', '前払いの入金', '当日の入金', '到着', '無断キャンセル', '知った経路', '窓口', '紹介者（招待リンク）', '申込日時', 'メモ'];
+        foreach (array_keys($answerKeys) as $key) {
+            $header[] = $answerLabels[$key] ?? (string) $key;
+        }
+        $rows = (function () use ($registrations, $answerKeys) {
+            foreach ($registrations as $r) {
+                $answers = $r['answers'] !== null ? json_decode((string) $r['answers'], true) : [];
+                $row = [
+                    $r['customer_name'],
+                    $r['customer_kana'],
+                    \App\Customers::GENDERS[$r['customer_gender'] ?? ''] ?? '',
+                    Csv::phone($r['customer_phone']),
+                    $r['customer_email'],
+                    Registrations::STATUSES[$r['status']] ?? $r['status'],
+                    (int) $r['fee'],
+                    $r['prepaid_at'] !== null ? date('Y-m-d', strtotime((string) $r['prepaid_at'])) : '',
+                    $r['paid_amount'] !== null ? (int) $r['paid_amount'] : '',
+                    $r['arrived_at'] !== null ? date('H:i', strtotime((string) $r['arrived_at'])) : '',
+                    $r['no_show_at'] !== null ? '無断キャンセル' : '',
+                    $r['channel'],
+                    $r['entry_from'] !== null ? Stats::entryLabel($r['entry_from']) : '',
+                    $r['referrer_name'],
+                    date('Y-m-d H:i', strtotime((string) $r['applied_at'])),
+                    $r['note'],
+                ];
+                foreach (array_keys($answerKeys) as $key) {
+                    $value = is_array($answers) ? ($answers[$key] ?? '') : '';
+                    $row[] = is_scalar($value) ? (string) $value : json_encode($value, JSON_UNESCAPED_UNICODE);
+                }
+                yield $row;
+            }
+        })();
+        Csv::download('申込者_' . date('Ymd', strtotime((string) $event['starts_at'])) . '_' . $event['title'] . '.csv', $header, $rows);
     }
 
     public static function edit(string $id): void

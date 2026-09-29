@@ -9,6 +9,7 @@
         <span class="actions">
             <a class="button" href="/admin/bans">出禁リスト</a>
             <a class="button" href="/admin/customers/duplicates">名寄せ</a>
+            <?php if (($admin['role'] ?? '') === 'owner'): ?><a class="button" href="/admin/customers.csv">CSVで書き出す</a><?php endif; ?>
             <a class="button button--primary" href="/admin/customers/new">登録</a>
         </span>
     </div>

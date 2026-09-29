@@ -20,7 +20,9 @@ final class SettingsController
     private const SECTIONS = [
         '掲示板' => ['site_tagline', 'site_lead', 'site_intro', 'event_faq', 'community_intro', 'contact_text', 'official_line_url', 'privacy_url'],
         '公式サイトとのつながり' => ['public_name', 'official_site_url', 'official_about_url', 'official_menu', 'tokushoho_url', 'instagram_url', 'embed_origins'],
+        '使う機能' => ['follow_enabled', 'referral_enabled', 'no_show_warn_count'],
         '運営への通知' => ['staff_notify_email', 'staff_notify_all'],
+        '会計' => ['fiscal_year_start_month'],
         '申込フォームの同意文' => ['notice_text', 'payment_text', 'cancel_policy_default', 'bank_account'],
         'メールの差出人と署名' => ['mail_from_name', 'mail_from_address', 'mail_signature'],
         '確認メール（申込を受け付けたとき）' => ['mail_confirm_subject', 'mail_confirm_body'],
@@ -30,6 +32,7 @@ final class SettingsController
         '前日リマインド' => ['mail_reminder_subject', 'mail_reminder_body'],
         '翌日お礼（アンケートの案内）' => ['mail_thanks_subject', 'mail_thanks_body'],
         'クルー募集ページと講座' => ['crew_intro', 'crew_benefits', 'crew_fee_text', 'crew_terms_url', 'crew_policy_url', 'crew_notice_text', 'learn_intro'],
+        '次回のお知らせと友だち招待' => ['follow_intro', 'mail_follow_confirm_subject', 'mail_follow_confirm_body', 'mail_follow_notice_subject', 'mail_follow_notice_body', 'referral_text'],
         'クルー・講座・ログインのメール' => [
             'mail_crew_applied_subject', 'mail_crew_applied_body', 'mail_crew_approved_subject', 'mail_crew_approved_body',
             'mail_login_subject', 'mail_login_body', 'mail_purchase_subject', 'mail_purchase_body', 'mail_purchase_paid_subject', 'mail_purchase_paid_body',
@@ -48,6 +51,12 @@ final class SettingsController
                 }
                 $value = $item[3] ? str_replace("\r\n", "\n", Form::raw($_POST, $key)) : Form::str($_POST, $key);
                 $values[$key] = $item[3] ? rtrim($value) : $value;
+            }
+            if (($values['no_show_warn_count'] ?? '') !== '' && !preg_match('/\A\d{1,2}\z/', $values['no_show_warn_count'])) {
+                $errors[] = '「無断キャンセルが何回の人を知らせるか」は 0〜99 の数字で入れてください。';
+            }
+            if (($values['fiscal_year_start_month'] ?? '') !== '' && !preg_match('/\A([1-9]|1[0-2])\z/', $values['fiscal_year_start_month'])) {
+                $errors[] = '会計年度の始まりの月は 1〜12 の数字で入れてください。';
             }
             if (($values['mail_from_address'] ?? '') !== '' && !filter_var($values['mail_from_address'], FILTER_VALIDATE_EMAIL)) {
                 $errors[] = '差出人のメールアドレスの形が正しくありません。';

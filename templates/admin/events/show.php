@@ -3,11 +3,16 @@
 /** @var array $registrations */
 /** @var array $survey */
 /** @var string $baseUrl */
+/** @var bool $followEnabled */
+/** @var int $followCount この形式の「次回のお知らせ」を受け取る人数 */
+/** @var int $notArrived 申込のまま到着の記録がない人数 */
 $id = (int) $event['id'];
 $banLabels = ['suspect' => ['badge badge--warn', '要確認（出禁と同名）'], 'confirmed' => ['badge badge--danger', '出禁該当']];
 $pendingCount = count(array_filter($registrations, fn ($r) => in_array($r['ban_check'], ['suspect', 'confirmed'], true) && $r['status'] !== 'cancelled'));
 $capacity = $event['capacity'] !== null ? (int) $event['capacity'] : null;
 $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== 'cancelled' && $r['prepaid_at'] !== null));
+$started = strtotime((string) $event['starts_at']) <= time() && $event['status'] !== 'cancelled';
+$noShowWarn = (int) App\Settings::get('no_show_warn_count');
 ?>
 <section class="card">
     <div class="toolbar">
@@ -46,6 +51,7 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
         <a class="button" href="/admin/events/<?= $id ?>/accounting">会計</a>
         <a class="button" href="/admin/events/<?= $id ?>/edit">編集</a>
         <a class="button" href="/admin/events/<?= $id ?>/preview">ページを確認</a>
+        <a class="button" href="/admin/events/<?= $id ?>/registrations.csv">申込者をCSVで</a>
         <form class="inline-form" method="post" action="/admin/events/<?= $id ?>/copy">
             <?= csrf_field() ?>
             <button type="submit" class="button">複製</button>
@@ -113,6 +119,24 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
     });
     </script>
 
+    <?php if ($followEnabled && (!$started || $event['announced_at'] !== null)): ?>
+        <h2>次回のお知らせ</h2>
+        <?php if ($event['announced_at'] !== null): ?>
+            <p>「<?= e($event['type_name']) ?>」の登録者に送信済みです（<?= e(fmt_dt($event['announced_at'])) ?>）。</p>
+        <?php elseif ($event['status'] !== 'open'): ?>
+            <p class="text-muted">「<?= e($event['type_name']) ?>」の次回のお知らせを受け取る人が <?= $followCount ?>人います。募集中にすると、ここからお知らせを送れます。</p>
+        <?php elseif ($followCount === 0): ?>
+            <p class="text-muted">「<?= e($event['type_name']) ?>」の次回のお知らせを受け取る人はまだいません。</p>
+        <?php else: ?>
+            <p>「<?= e($event['type_name']) ?>」の次回のお知らせを受け取る <strong><?= $followCount ?>人</strong> に、募集が始まったことをメールで知らせます。1つのイベントにつき1回だけ送れます。</p>
+            <form class="inline-form" method="post" action="/admin/events/<?= $id ?>/announce" onsubmit="return confirm('<?= $followCount ?>人にお知らせのメールを送ります。よろしいですか？');">
+                <?= csrf_field() ?>
+                <button type="submit" class="button button--primary button--small">お知らせを送る</button>
+            </form>
+        <?php endif; ?>
+        <p class="text-muted small"><a href="/admin/follows">登録者の一覧</a>・文面は「設定」の「次回のお知らせと友だち招待」で変えられます。</p>
+    <?php endif; ?>
+
     <h2>メール</h2>
     <p class="text-muted">前日のリマインドと翌日のお礼は自動で送ります（サーバーの定期実行）。今すぐ送りたいときはこちら。すでに送った人には送りません。</p>
     <div class="actions">
@@ -149,6 +173,13 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
     <?php if ($pendingCount > 0): ?>
         <p class="warning-box">出禁チェックで印が付いた申込が <?= $pendingCount ?>件あります。「詳細」から確認してください。</p>
     <?php endif; ?>
+    <?php if ($started && $notArrived > 0 && (int) $event['arrived_count'] > 0): ?>
+        <form method="post" action="/admin/events/<?= $id ?>/no-shows" class="info-box" onsubmit="return confirm('到着の記録がない <?= $notArrived ?>人を無断キャンセルにします。よろしいですか？');">
+            <?= csrf_field() ?>
+            <p>申込のまま到着の記録がない人が <strong><?= $notArrived ?>人</strong> います。連絡なしで来なかった人は、無断キャンセルとして記録しておくと、次に申し込んだときに運営への通知で分かります。</p>
+            <button type="submit" class="button button--small">到着の記録がない <?= $notArrived ?>人を無断キャンセルにする</button>
+        </form>
+    <?php endif; ?>
     <?php if ($registrations === []): ?>
         <p class="text-muted">まだ申込がありません。</p>
     <?php else: ?>
@@ -166,6 +197,9 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
                                 <?php if ($r['customer_kana'] !== null): ?><br><span class="text-muted"><?= e($r['customer_kana']) ?></span><?php endif; ?>
                                 <?php if ($r['customer_banned_at'] !== null): ?><span class="badge badge--danger">出禁</span><?php endif; ?>
                                 <?php if (isset($banLabels[$r['ban_check']])): ?><span class="<?= e($banLabels[$r['ban_check']][0]) ?>"><?= e($banLabels[$r['ban_check']][1]) ?></span><?php endif; ?>
+                                <?php $otherNoShows = (int) $r['customer_no_shows'] - ($r['no_show_at'] !== null ? 1 : 0); ?>
+                                <?php if ($otherNoShows > 0): ?><span class="badge<?= $noShowWarn > 0 && $otherNoShows >= $noShowWarn ? ' badge--danger' : ' badge--warn' ?>">無断キャンセル<?= $otherNoShows ?>回</span><?php endif; ?>
+                                <?php if ($r['referrer_name'] !== null): ?><br><span class="text-muted small">紹介：<?= e($r['referrer_name']) ?></span><?php endif; ?>
                             </td>
                             <td><span class="<?= e(App\Registrations::STATUS_BADGES[$r['status']] ?? 'badge') ?>"><?= e(App\Registrations::STATUSES[$r['status']] ?? $r['status']) ?></span></td>
                             <td class="num"><?= e(yen($r['fee'])) ?></td>
@@ -178,7 +212,18 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
                                     <span class="text-muted">—</span>
                                 <?php endif; ?>
                             </td>
-                            <td><?= $r['arrived_at'] !== null ? e(date('H:i', strtotime($r['arrived_at']))) : '<span class="text-muted">—</span>' ?></td>
+                            <td>
+                                <?php if ($r['arrived_at'] !== null): ?>
+                                    <?= e(date('H:i', strtotime($r['arrived_at']))) ?>
+                                <?php elseif ($r['no_show_at'] !== null): ?>
+                                    <span class="badge badge--danger">無断キャンセル</span>
+                                    <form class="inline-form" method="post" action="/admin/registrations/<?= $rid ?>/no-show"><?= csrf_field() ?><button type="submit" class="linklike small">外す</button></form>
+                                <?php elseif ($started && $r['status'] === 'applied'): ?>
+                                    <form class="inline-form" method="post" action="/admin/registrations/<?= $rid ?>/no-show" onsubmit="return confirm('無断キャンセル（連絡なしで来なかった）にします。よろしいですか？');"><?= csrf_field() ?><input type="hidden" name="no_show" value="1"><button type="submit" class="button button--small">無断キャンセル</button></form>
+                                <?php else: ?>
+                                    <span class="text-muted">—</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="wrap"><?= e($r['channel'] ?? '—') ?></td>
                             <td>
                                 <div class="actions">

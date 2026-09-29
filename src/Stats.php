@@ -55,7 +55,7 @@ final class Stats
                 $e['male']++;
             }
             $e[(int) $row['is_new'] === 1 ? 'new' : 'repeat']++;
-            $from = $row['entry_from'] ?? '（直接）';
+            $from = $row['entry_from'] !== null ? self::entryLabel($row['entry_from']) : '（直接）';
             $e['by_from'][$from] = ($e['by_from'][$from] ?? 0) + 1;
             $channel = $row['channel'] ?? '（未回答）';
             $e['by_channel'][$channel] = ($e['by_channel'][$channel] ?? 0) + 1;
@@ -100,7 +100,29 @@ final class Stats
         ], $rows);
     }
 
-    /** 窓口別リンクの候補（回の詳細に出す） */
+    /**
+     * 友だち招待のリンクから申し込んでもらった人数の多い順（キャンセルは数えない）
+     *
+     * @return list<array{id: int, name: string, count: int, last: string}>
+     */
+    public static function referrers(int $limit = 10): array
+    {
+        $rows = Database::pdo()->query(
+            "SELECT rc.id, rc.name, COUNT(*) AS cnt, MAX(r.applied_at) AS last_at
+             FROM registrations r JOIN customers rc ON rc.id = r.referrer_customer_id
+             WHERE r.status <> 'cancelled'
+             GROUP BY rc.id, rc.name ORDER BY cnt DESC, last_at DESC LIMIT " . (int) $limit
+        )->fetchAll();
+        return array_map(fn ($r) => ['id' => (int) $r['id'], 'name' => (string) $r['name'], 'count' => (int) $r['cnt'], 'last' => (string) $r['last_at']], $rows);
+    }
+
+    /** 窓口の表示名（?from= の値）。「次回のお知らせ」のメールから来た申込は follow */
+    public static function entryLabel(string $key): string
+    {
+        return self::ENTRY_KEYS[$key] ?? ($key === 'follow' ? '次回のお知らせメール' : $key);
+    }
+
+    /** 窓口別リンクの候補（イベントの詳細に出す） */
     public const ENTRY_KEYS = [
         'line' => 'MINATO公式LINE',
         'site' => '公式サイト',

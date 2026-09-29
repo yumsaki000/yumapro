@@ -110,13 +110,17 @@ final class MailTemplates
             return false;
         }
         $check = $r['ban_check'] ?? 'none';
-        if ($check === 'none' && Settings::get('staff_notify_all') !== '1') {
+        $noShows = (int) ($r['customer_no_shows'] ?? 0);
+        $threshold = (int) Settings::get('no_show_warn_count');
+        $noShowWarn = $threshold > 0 && $noShows >= $threshold;
+        if ($check === 'none' && !$noShowWarn && Settings::get('staff_notify_all') !== '1') {
             return false;
         }
         $base = rtrim((string) Config::get('APP_URL', ''), '/');
-        $head = match ($check) {
-            'confirmed' => '【出禁該当】',
-            'suspect' => '【要確認】',
+        $head = match (true) {
+            $check === 'confirmed' => '【出禁該当】',
+            $check === 'suspect' => '【要確認】',
+            $noShowWarn => "【無断キャンセル{$noShows}回】",
             default => '【申込】',
         };
         $subject = "{$head}{$r['event_title']}：{$r['customer_name']}";
@@ -134,6 +138,12 @@ final class MailTemplates
         } elseif ($check === 'suspect') {
             $lines[] = '■ 出禁チェック：名前が出禁リストの人と同じです（連絡先は一致していません）。別人かどうか確認してください。';
         }
+        if ($noShows > 0) {
+            $lines[] = "■ 無断キャンセル：これまでに{$noShows}回あります。申込は受け付けています。必要なら本人に連絡してください。";
+        }
+        if (!empty($r['referrer_name'])) {
+            $lines[] = "■ 紹介：{$r['referrer_name']} さんの招待リンクから";
+        }
         $lines[] = '';
         $lines[] = '確認・処理はこちら：';
         $lines[] = "{$base}/admin/registrations/" . (int) $r['id'] . '/edit';
@@ -142,6 +152,12 @@ final class MailTemplates
             $ok = Mailer::send($to, $subject, implode("\n", $lines), 'staff_notify', (int) $r['id'], (int) $r['customer_id']) && $ok;
         }
         return $ok;
+    }
+
+    /** メールの末尾の署名（設定の「署名」。前に空行を入れる） */
+    public static function signature(): string
+    {
+        return "\n\n" . self::fill(Settings::get('mail_signature'), ['contact_text' => Settings::get('contact_text'), 'official_line_url' => Settings::get('official_line_url')]);
     }
 
     /** @param array<string, string> $vars */

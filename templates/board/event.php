@@ -250,6 +250,10 @@ $buttonLabel = $remaining === 0 ? 'キャンセル待ちで申し込む' : 'こ�
     </section>
 <?php endif; ?>
 
+<?php if (!$preview): ?>
+    <?= App\View::render('follow/_form', ['back' => '/e/' . $event['slug'], 'preselect' => (int) $event['event_type_id']], null) ?>
+<?php endif; ?>
+
 <?php if ($accepting): ?>
     <div class="apply-bar">
         <div class="apply-bar__info">

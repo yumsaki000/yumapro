@@ -63,3 +63,4 @@ $query = fn (array $params) => ($q = http_build_query(array_filter($params, fn (
         </article>
     <?php endforeach; ?>
 </div>
+<?= App\View::render('follow/_form', ['back' => current_path(), 'preselect' => null], null) ?>

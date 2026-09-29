@@ -29,6 +29,18 @@ final class Settings
         'tokushoho_url' => ['特定商取引法に基づく表記のURL', 'フッターに出す。空欄なら出さない', 'https://minatocrew.com/reverso-context/', false],
         'instagram_url' => ['InstagramのURL', 'フッターに出す。空欄なら出さない', 'https://www.instagram.com/minato_community/', false],
         'embed_origins' => ['埋め込みを許すサイト', 'イベント一覧を iframe で出してよいサイト（https:// から。複数のときはスペース区切り）', 'https://minatocrew.com https://www.minatocrew.com', false],
+        // ── 使う機能（使わないものは切っておける） ──
+        'follow_enabled' => ['「次回のお知らせ」の登録を出す', 'イベント一覧とイベントページに、形式ごとに次回のお知らせを受け取る登録欄を出す', '', false],
+        'referral_enabled' => ['友だち招待のリンクを出す', 'マイページに、その人専用の招待リンクを出す。リンクから来た申込には紹介者が記録される', '', false],
+        'no_show_warn_count' => ['無断キャンセルが何回の人を知らせるか', 'この回数以上の人が申し込んだら、運営への通知メールで知らせる。0 なら知らせない', '2', false],
+        'follow_intro' => ['「次回のお知らせ」の説明', '登録欄の上に出す文', '次のイベントの募集が始まったら、メールでお知らせします。気になる形式を選んでください。', true],
+        'referral_text' => ['友だち招待の説明', 'マイページの招待リンクの上に出す文', 'このリンクから友だちが申し込むと、あなたの紹介として記録されます。初めての人も、知っている人と一緒なら安心です。', true],
+        'mail_follow_confirm_subject' => ['お知らせ登録の確認メール：件名', '登録したとき', '【MINATO】次回のお知らせの登録を確認してください', false],
+        'mail_follow_confirm_body' => ['お知らせ登録の確認メール：本文', '使える言葉：{types} {confirm_url}', "MINATO の「次回のお知らせ」にご登録いただき、ありがとうございます。\n\n次のリンクを開くと登録が完了します（心当たりがなければ、このメールは破棄してください）。\n{confirm_url}\n\n■ お知らせする形式：{types}", true],
+        'mail_follow_notice_subject' => ['次回のお知らせメール：件名', '募集が始まったとき', '【MINATO】募集が始まりました：{event_title}', false],
+        'mail_follow_notice_body' => ['次回のお知らせメール：本文', '使える言葉：{event_title} {event_datetime} {place} {fee} {summary} {event_url} {manage_url}', "{event_title} の募集が始まりました。\n\n{summary}\n\n■ 日時：{event_datetime}\n■ 場所：{place}\n■ 参加費：{fee}\n\nくわしい内容・お申込みはこちら\n{event_url}\n\n――――――――――\nお知らせの形式の変更・停止はこちら\n{manage_url}", true],
+        // ── 会計 ──
+        'fiscal_year_start_month' => ['会計年度の始まりの月', '1 なら 1月〜12月（個人の確定申告）。法人などで4月始まりなら 4', '1', false],
         // ── 運営への通知 ──
         'staff_notify_email' => ['運営への通知メールの宛先', '出禁に該当・要確認の申込があったときに知らせる。空欄なら通知しない。複数のときはカンマ区切り', '', false],
         'staff_notify_all' => ['すべての申込を通知する', '1 と入れると、出禁に関係なくすべての申込を上の宛先に知らせる', '', false],

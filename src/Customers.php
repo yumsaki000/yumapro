@@ -271,6 +271,69 @@ final class Customers
         Database::pdo()->prepare($sql)->execute([$id]);
     }
 
+    /**
+     * CSV 書き出し用：全員（五十音順）と、申込・参加・無断キャンセルの数、最後に申し込んだイベントの日
+     *
+     * @return \Generator<array>
+     */
+    public static function exportRows(): \Generator
+    {
+        $stmt = Database::pdo()->query(
+            "SELECT c.*,
+                (SELECT COUNT(*) FROM registrations r WHERE r.customer_id = c.id AND r.status <> 'cancelled') AS registration_count,
+                (SELECT COUNT(*) FROM registrations r JOIN checkins k ON k.registration_id = r.id
+                    WHERE r.customer_id = c.id AND k.arrived_at IS NOT NULL) AS attended_count,
+                (SELECT COUNT(*) FROM registrations r WHERE r.customer_id = c.id AND r.no_show_at IS NOT NULL) AS no_show_count,
+                (SELECT MAX(e.starts_at) FROM registrations r JOIN events e ON e.id = r.event_id
+                    WHERE r.customer_id = c.id AND r.status <> 'cancelled') AS last_event_at
+             FROM customers c
+             ORDER BY c.name_kana IS NULL, c.name_kana, c.name, c.id"
+        );
+        while ($row = $stmt->fetch()) {
+            yield $row;
+        }
+    }
+
+    /** 友だち招待のリンクに使う文字列。まだなければ作る */
+    public static function referralCode(int $id): string
+    {
+        $pdo = Database::pdo();
+        $stmt = $pdo->prepare('SELECT referral_code FROM customers WHERE id = ?');
+        $stmt->execute([$id]);
+        $code = $stmt->fetchColumn();
+        if (is_string($code) && $code !== '') {
+            return $code;
+        }
+        $check = $pdo->prepare('SELECT 1 FROM customers WHERE referral_code = ?');
+        do {
+            // 読み間違えやすい文字（0 O 1 l i）を使わない8文字
+            $code = '';
+            $chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+            for ($i = 0; $i < 8; $i++) {
+                $code .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+            $check->execute([$code]);
+        } while ($check->fetchColumn());
+        $pdo->prepare('UPDATE customers SET referral_code = ? WHERE id = ? AND referral_code IS NULL')->execute([$code, $id]);
+        return self::referralCode($id);
+    }
+
+    /** 招待コードの持ち主 */
+    public static function findByReferralCode(string $code): ?array
+    {
+        if (!self::isReferralCode($code)) {
+            return null;
+        }
+        $stmt = Database::pdo()->prepare('SELECT * FROM customers WHERE referral_code = ?');
+        $stmt->execute([$code]);
+        return $stmt->fetch() ?: null;
+    }
+
+    public static function isReferralCode(mixed $code): bool
+    {
+        return is_string($code) && preg_match('/\A[a-z2-9]{8}\z/', $code) === 1;
+    }
+
     public static function isMailOptedIn(array $customer): bool
     {
         return $customer['mail_opt_in_at'] !== null && $customer['mail_opt_out_at'] === null;
@@ -354,6 +417,9 @@ final class Customers
             }
 
             $pdo->prepare('UPDATE registrations SET customer_id = ? WHERE customer_id = ?')->execute([$intoId, $fromId]);
+            $pdo->prepare('UPDATE registrations SET referrer_customer_id = ? WHERE referrer_customer_id = ?')->execute([$intoId, $fromId]);
+            // 自分で自分を紹介した形になった申込は、紹介者を外す
+            $pdo->prepare('UPDATE registrations SET referrer_customer_id = NULL WHERE customer_id = ? AND referrer_customer_id = ?')->execute([$intoId, $intoId]);
             $pdo->prepare('UPDATE inquiries SET customer_id = ? WHERE customer_id = ?')->execute([$intoId, $fromId]);
 
             // 残す側の空の項目を、消す側の値で埋める
@@ -366,8 +432,11 @@ final class Customers
             if ($from['note'] !== null && $from['note'] !== '') {
                 $fill['note'] = $into['note'] === null || $into['note'] === '' ? $from['note'] : $into['note'] . "\n" . $from['note'];
             }
-            // 消す側の番号を残す側に移すため、先に消す側から外す（番号は一意）
-            $pdo->prepare('UPDATE customers SET legacy_no = NULL WHERE id = ?')->execute([$fromId]);
+            // 消す側の番号・招待コードを残す側に移すため、先に消す側から外す（どちらも一意）
+            if (($into['referral_code'] ?? null) === null && ($from['referral_code'] ?? null) !== null) {
+                $fill['referral_code'] = $from['referral_code'];
+            }
+            $pdo->prepare('UPDATE customers SET legacy_no = NULL, referral_code = NULL WHERE id = ?')->execute([$fromId]);
             if ($fill !== []) {
                 $sets = implode(', ', array_map(fn ($c) => "{$c} = ?", array_keys($fill)));
                 $params = array_values($fill);

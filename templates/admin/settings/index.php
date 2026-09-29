@@ -18,6 +18,14 @@
                 <div class="form">
                     <?php foreach ($keys as $key): ?>
                         <?php [$label, $help, $default, $multiline] = App\Settings::ITEMS[$key]; ?>
+                        <?php if (str_ends_with($key, '_enabled')): ?>
+                            <div class="form__field">
+                                <input type="hidden" name="<?= e($key) ?>" value="">
+                                <label class="form__check"><input type="checkbox" name="<?= e($key) ?>" value="1"<?= $values[$key] === '1' ? ' checked' : '' ?>> <span><strong><?= e($label) ?></strong></span></label>
+                                <span class="form__help"><?= e($help) ?></span>
+                            </div>
+                            <?php continue; ?>
+                        <?php endif; ?>
                         <label class="form__field">
                             <span class="form__label"><?= e($label) ?></span>
                             <?php if ($multiline): ?>

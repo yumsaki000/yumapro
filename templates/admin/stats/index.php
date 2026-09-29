@@ -1,17 +1,18 @@
 <?php
 /** @var array $events */
 /** @var array $monthly */
+/** @var array $referrers */
 $pairs = fn (array $counts) => implode('、', array_map(fn ($k, $v) => "{$k} {$v}", array_keys($counts), $counts));
 ?>
 <section class="card">
     <h1>集計</h1>
-    <p class="text-muted">「新規」はその回より前に申込がない人、「リピート」は前にも申込がある人です（キャンセルは数えません）。「窓口」は申込フォームへのリンクの ?from= の値、「知った経路」は本人が選んだ回答です。</p>
+    <p class="text-muted">「新規」はそのイベントより前に申込がない人、「リピート」は前にも申込がある人です（キャンセルは数えません）。「窓口」は申込フォームへのリンクの ?from= の値、「知った経路」は本人が選んだ回答です。</p>
 
     <h2>月ごと（開催月・申込ベース）</h2>
     <?php if ($monthly === []): ?><p class="text-muted">まだ申込がありません。</p><?php else: ?>
         <div class="table-wrap">
             <table class="table">
-                <thead><tr><th>月</th><th class="num">回数</th><th class="num">申込</th><th class="num">新規</th><th class="num">リピート</th><th class="num">女性</th></tr></thead>
+                <thead><tr><th>月</th><th class="num">イベント数</th><th class="num">申込</th><th class="num">新規</th><th class="num">リピート</th><th class="num">女性</th></tr></thead>
                 <tbody>
                     <?php foreach ($monthly as $m): ?>
                         <tr>
@@ -28,6 +29,23 @@ $pairs = fn (array $counts) => implode('、', array_map(fn ($k, $v) => "{$k} {$v
         </div>
     <?php endif; ?>
 </section>
+
+<?php if ($referrers !== []): ?>
+    <section class="card">
+        <h2>友だち招待（紹介の多い人）</h2>
+        <p class="text-muted">マイページの招待リンクから、友だちに申し込んでもらった人数です（キャンセルは数えません）。</p>
+        <div class="table-wrap">
+            <table class="table">
+                <thead><tr><th>紹介した人</th><th class="num">申込</th><th>最後の申込</th></tr></thead>
+                <tbody>
+                    <?php foreach ($referrers as $ref): ?>
+                        <tr><td><a href="/admin/customers/<?= $ref['id'] ?>"><?= e($ref['name']) ?></a></td><td class="num"><?= $ref['count'] ?></td><td><?= e(fmt_dt($ref['last'], false)) ?></td></tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+<?php endif; ?>
 
 <section class="card">
     <h2>イベントごと（新しい順・30件まで）</h2>

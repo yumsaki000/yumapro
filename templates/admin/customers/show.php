@@ -1,10 +1,12 @@
 <?php
 /** @var array $customer */
 /** @var array $history */
+/** @var array $referred この人の招待リンクから申し込んだ申込 */
 /** @var array $candidates */
 /** @var array $legacy */
 $id = (int) $customer['id'];
 $optedIn = App\Customers::isMailOptedIn($customer);
+$noShows = count(array_filter($history, fn ($r) => $r['no_show_at'] !== null));
 ?>
 <section class="card">
     <div class="toolbar">
@@ -12,6 +14,7 @@ $optedIn = App\Customers::isMailOptedIn($customer);
         <span>
             <?php if ($customer['banned_at'] !== null): ?><span class="badge badge--danger">出禁</span><?php endif; ?>
             <?php if ($optedIn): ?><span class="badge badge--ok">案内メール同意</span><?php endif; ?>
+            <?php if ($noShows > 0): ?><span class="badge badge--warn">無断キャンセル<?= $noShows ?>回</span><?php endif; ?>
         </span>
     </div>
     <dl class="kv">
@@ -51,7 +54,7 @@ $optedIn = App\Customers::isMailOptedIn($customer);
                             <td><span class="<?= e(App\Registrations::STATUS_BADGES[$r['status']] ?? 'badge') ?>"><?= e(App\Registrations::STATUSES[$r['status']] ?? $r['status']) ?></span></td>
                             <td class="num"><?= e(yen($r['fee'])) ?></td>
                             <td><?= $r['prepaid_at'] !== null ? '前払い済' : ($r['paid_amount'] !== null ? '当日 ' . e(yen($r['paid_amount'])) : '—') ?></td>
-                            <td><?= $r['arrived_at'] !== null ? e(fmt_dt($r['arrived_at'])) : '—' ?></td>
+                            <td><?= $r['arrived_at'] !== null ? e(fmt_dt($r['arrived_at'])) : ($r['no_show_at'] !== null ? '<span class="badge badge--danger">無断キャンセル</span>' : '—') ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -59,6 +62,23 @@ $optedIn = App\Customers::isMailOptedIn($customer);
         </div>
     <?php endif; ?>
 </section>
+
+<?php if ($referred !== []): ?>
+    <section class="card">
+        <h2>紹介した人（<?= count($referred) ?>件）</h2>
+        <p class="text-muted">この人の招待リンクから申し込んだ人です。</p>
+        <ul class="list">
+            <?php foreach ($referred as $r): ?>
+                <li class="list__item<?= $r['status'] === 'cancelled' ? ' is-muted' : '' ?>">
+                    <div class="list__main">
+                        <a class="list__title" href="/admin/customers/<?= (int) $r['customer_id'] ?>"><?= e($r['customer_name']) ?></a>
+                        <div class="list__sub"><a href="/admin/events/<?= (int) $r['event_id'] ?>"><?= e($r['event_title']) ?></a>　<?= e(fmt_dt($r['event_starts_at'], false)) ?>　<?= e(App\Registrations::STATUSES[$r['status']] ?? $r['status']) ?></div>
+                    </div>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </section>
+<?php endif; ?>
 
 <?php if ($candidates !== []): ?>
     <section class="card">
@@ -71,7 +91,7 @@ $optedIn = App\Customers::isMailOptedIn($customer);
                         <a class="list__title" href="/admin/customers/<?= (int) $c['id'] ?>"><?= e($c['name']) ?></a><?= $c['name_kana'] !== null ? ' <span class="text-muted">' . e($c['name_kana']) . '</span>' : '' ?>
                         <div class="list__sub">電話 <?= e($c['phone'] ?? '—') ?>　メール <?= e($c['email'] ?? '—') ?>　SNS <?= e($c['sns_account'] ?? '—') ?></div>
                     </div>
-                    <form class="inline-form" method="post" action="/admin/customers/merge" onsubmit="return confirm('「<?= e($c['name']) ?>」をこちらにまとめます。よろしいですか？');">
+                    <form class="inline-form" method="post" action="/admin/customers/merge" data-confirm="「<?= e($c['name']) ?>」をこちらにまとめます。よろしいですか？" onsubmit="return confirm(this.dataset.confirm);">
                         <?= csrf_field() ?>
                         <input type="hidden" name="into_id" value="<?= $id ?>">
                         <input type="hidden" name="from_ids[]" value="<?= (int) $c['id'] ?>">

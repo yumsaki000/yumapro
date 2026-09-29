@@ -17,7 +17,10 @@ $rid = (int) $r['id'];
         <dt>状態</dt><dd><span class="<?= e(App\Registrations::STATUS_BADGES[$r['status']] ?? 'badge') ?>"><?= e(App\Registrations::STATUSES[$r['status']] ?? $r['status']) ?></span></dd>
         <dt>申込元</dt><dd><?= e(App\Registrations::SOURCES[$r['source']] ?? $r['source']) ?>　<?= e(fmt_dt($r['applied_at'])) ?></dd>
         <dt>到着</dt><dd><?= $r['arrived_at'] !== null ? e(fmt_dt($r['arrived_at'])) . ($r['paid_amount'] !== null ? '・当日 ' . e(yen($r['paid_amount'])) : '') : '—' ?></dd>
-        <?php if ($r['entry_from'] !== null): ?><dt>窓口</dt><dd><?= e(App\Stats::ENTRY_KEYS[$r['entry_from']] ?? $r['entry_from']) ?></dd><?php endif; ?>
+        <?php if ($r['no_show_at'] !== null): ?><dt>無断キャンセル</dt><dd><span class="badge badge--danger">無断キャンセル</span>（<?= e(fmt_dt($r['no_show_at'])) ?> に記録）<form class="inline-form" method="post" action="/admin/registrations/<?= $rid ?>/no-show"><?= csrf_field() ?><input type="hidden" name="back" value="/admin/registrations/<?= $rid ?>/edit"><button type="submit" class="linklike small">外す</button></form></dd><?php endif; ?>
+        <?php if ((int) $r['customer_no_shows'] > ($r['no_show_at'] !== null ? 1 : 0)): ?><dt>この人の無断キャンセル</dt><dd>これまでに <?= (int) $r['customer_no_shows'] ?>回</dd><?php endif; ?>
+        <?php if ($r['referrer_name'] !== null): ?><dt>紹介</dt><dd><a href="/admin/customers/<?= (int) $r['referrer_customer_id'] ?>"><?= e($r['referrer_name']) ?></a> さんの招待リンクから</dd><?php endif; ?>
+        <?php if ($r['entry_from'] !== null): ?><dt>窓口</dt><dd><?= e(App\Stats::entryLabel($r['entry_from'])) ?></dd><?php endif; ?>
         <?php if ($r['ban_check'] !== 'none'): ?><dt>出禁チェック</dt><dd><span class="<?= e(App\Bans::CHECK_LABELS[$r['ban_check']][0] ?? 'badge') ?>"><?= e(App\Bans::CHECK_LABELS[$r['ban_check']][1] ?? $r['ban_check']) ?></span></dd><?php endif; ?>
         <?php if ($r['consented_at'] !== null): ?><dt>同意</dt><dd>注意事項などに同意（<?= e(fmt_dt($r['consented_at'])) ?>）</dd><?php endif; ?>
         <?php $answers = $r['answers'] !== null ? json_decode($r['answers'], true) : null; ?>

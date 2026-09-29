@@ -10,6 +10,7 @@ use App\Admin\CoursesController;
 use App\Admin\CrewController as AdminCrewController;
 use App\Admin\CustomersController;
 use App\Admin\EventsController;
+use App\Admin\FollowsController;
 use App\Admin\MailController;
 use App\Admin\MembersController;
 use App\Admin\RegistrationsController;
@@ -24,6 +25,7 @@ use App\Session;
 use App\View;
 use App\Web\BoardController;
 use App\Web\CrewController;
+use App\Web\FollowController;
 use App\Web\LearnController;
 use App\Web\LoginController;
 use App\Web\MyPageController;
@@ -44,6 +46,9 @@ $router->get('/my/{token}', [MyPageController::class, 'show']);
 $router->post('/my/{token}/cancel/{id}', [MyPageController::class, 'cancel']);
 $router->post('/my/{token}/mail', [MyPageController::class, 'mail']);
 $router->form('/my/{token}/survey/{id}', [MyPageController::class, 'survey']);
+$router->post('/follow', [FollowController::class, 'subscribe']);
+$router->get('/follow/sent', [FollowController::class, 'sent']);
+$router->form('/follow/{token}', [FollowController::class, 'manage']);
 
 // ── 参加者向け：ログイン（メールのリンク）、クルー募集、講座 ──────
 $router->get('/login', [LoginController::class, 'form']);
@@ -130,7 +135,7 @@ $router->get('/admin', function (): void {
     ], 'admin/layout');
 });
 
-// ── 回 ─────────────────────────────────────────────
+// ── イベント ─────────────────────────────────────────────
 $router->get('/admin/events', [EventsController::class, 'index']);
 $router->form('/admin/events/new', [EventsController::class, 'create']);
 $router->get('/admin/events/{id}', [EventsController::class, 'show']);
@@ -139,6 +144,10 @@ $router->get('/admin/events/{id}/preview', [EventsController::class, 'preview'])
 $router->post('/admin/events/{id}/copy', [EventsController::class, 'copy']);
 $router->post('/admin/events/{id}/status', [EventsController::class, 'status']);
 $router->post('/admin/events/{eventId}/mails', [MailController::class, 'send']);
+$router->post('/admin/events/{eventId}/announce', [FollowsController::class, 'announce']);
+$router->post('/admin/events/{id}/no-shows', [EventsController::class, 'markNoShows']);
+$router->get('/admin/events/{id}/registrations.csv', [EventsController::class, 'registrationsCsv']);
+$router->get('/admin/follows', [FollowsController::class, 'index']);
 
 // ── 申込（手入力・変更） ─────────────────────────────
 $router->form('/admin/events/{eventId}/registrations/new', [RegistrationsController::class, 'create']);
@@ -146,6 +155,7 @@ $router->form('/admin/registrations/{id}/edit', [RegistrationsController::class,
 $router->post('/admin/registrations/{id}/cancel', [RegistrationsController::class, 'cancel']);
 $router->post('/admin/registrations/{id}/restore', [RegistrationsController::class, 'restore']);
 $router->post('/admin/registrations/{id}/prepaid', [RegistrationsController::class, 'prepaid']);
+$router->post('/admin/registrations/{id}/no-show', [RegistrationsController::class, 'noShow']);
 $router->post('/admin/registrations/{id}/ban-check', [BansController::class, 'review']);
 
 // ── 当日受付 ─────────────────────────────────────────
@@ -155,13 +165,17 @@ $router->post('/admin/registrations/{id}/checkin/undo', [CheckinController::clas
 
 // ── 会計 ─────────────────────────────────────────────
 $router->get('/admin/accounting', [AccountingController::class, 'index']);
+$router->get('/admin/accounting.csv', [AccountingController::class, 'csv']);
 $router->get('/admin/events/{eventId}/accounting', [AccountingController::class, 'show']);
 $router->post('/admin/events/{eventId}/expenses', [AccountingController::class, 'addExpense']);
+$router->post('/admin/accounting/expenses', [AccountingController::class, 'addCommonExpense']);
+$router->form('/admin/expenses/{id}/edit', [AccountingController::class, 'editExpense']);
 $router->post('/admin/expenses/{id}/delete', [AccountingController::class, 'deleteExpense']);
 $router->post('/admin/events/{eventId}/organizer', [AccountingController::class, 'organizer']);
 
 // ── 顧客台帳 ─────────────────────────────────────────
 $router->get('/admin/customers', [CustomersController::class, 'index']);
+$router->get('/admin/customers.csv', [CustomersController::class, 'csv']);
 $router->form('/admin/customers/new', [CustomersController::class, 'create']);
 $router->get('/admin/customers/duplicates', [CustomersController::class, 'duplicates']);
 $router->post('/admin/customers/merge', [CustomersController::class, 'merge']);

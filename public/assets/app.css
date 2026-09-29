@@ -642,6 +642,37 @@ code.secret {
     border-radius: 8px;
 }
 
+.help-box {
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    background: #f7f7f4;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.help-box summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.help-box ul {
+    margin: 8px 0 0;
+    padding-left: 1.2em;
+    line-height: 1.8;
+}
+
+.info-box {
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    background: #f1f6fb;
+    border: 1px solid #b9cde3;
+    border-radius: 8px;
+}
+
+.info-box p {
+    margin: 0 0 8px;
+}
+
 pre.plain {
     white-space: pre-wrap;
     font: inherit;
@@ -1644,6 +1675,28 @@ body.public .share--line {
     margin: 0 0 12px;
     font-size: 1.15rem;
     color: var(--color-navy);
+}
+
+/* 次回のお知らせの登録欄 */
+.follow-box {
+    max-width: 640px;
+    margin: 32px auto 0;
+}
+
+.follow-box h2 {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+    color: var(--color-navy);
+}
+
+.follow-box__types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+}
+
+.follow-stop {
+    margin: 16px 0;
 }
 
 /* スマホで画面の下に出す申込の帯 */

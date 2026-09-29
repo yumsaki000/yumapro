@@ -22,11 +22,14 @@ final class Registrations
             e.title AS event_title, e.slug AS event_slug, e.starts_at AS event_starts_at, e.ends_at AS event_ends_at,
             e.payment_timing AS event_payment_timing, e.status AS event_status, e.venue_name AS event_venue_name,
             e.venue_address AS event_venue_address, e.venue_url AS event_venue_url, e.cancel_policy AS event_cancel_policy,
-            e.cancel_deadline AS event_cancel_deadline, e.capacity AS event_capacity
+            e.cancel_deadline AS event_cancel_deadline, e.capacity AS event_capacity,
+            rc.name AS referrer_name,
+            (SELECT COUNT(*) FROM registrations x WHERE x.customer_id = r.customer_id AND x.no_show_at IS NOT NULL) AS customer_no_shows
         FROM registrations r
         JOIN customers c ON c.id = r.customer_id
         JOIN events e ON e.id = r.event_id
-        LEFT JOIN checkins k ON k.registration_id = r.id';
+        LEFT JOIN checkins k ON k.registration_id = r.id
+        LEFT JOIN customers rc ON rc.id = r.referrer_customer_id';
 
     public static function find(int $id): ?array
     {
@@ -43,6 +46,59 @@ final class Registrations
              ORDER BY FIELD(r.status, 'applied', 'waitlisted', 'cancelled'), c.name_kana IS NULL, c.name_kana, c.name, r.id"
         );
         $stmt->execute([$eventId]);
+        return $stmt->fetchAll();
+    }
+
+    // ── 無断キャンセル ─────────────────────────────────
+
+    /** 1件の申込に無断キャンセルの印を付ける／外す */
+    public static function setNoShow(int $id, bool $noShow): void
+    {
+        Database::pdo()->prepare('UPDATE registrations SET no_show_at = ? WHERE id = ?')
+            ->execute([$noShow ? date('Y-m-d H:i:s') : null, $id]);
+    }
+
+    /**
+     * 開催が済んだイベントで、申込のまま到着の記録がない人に無断キャンセルの印を付ける。付けた件数を返す。
+     * 当日受付を使っていないイベントでは全員に付いてしまうので、呼ぶ側で「受付を使ったか」を確かめる
+     */
+    public static function markNoShows(int $eventId): int
+    {
+        $stmt = Database::pdo()->prepare(
+            "UPDATE registrations r LEFT JOIN checkins k ON k.registration_id = r.id
+             SET r.no_show_at = NOW()
+             WHERE r.event_id = ? AND r.status = 'applied' AND r.no_show_at IS NULL AND k.arrived_at IS NULL"
+        );
+        $stmt->execute([$eventId]);
+        return $stmt->rowCount();
+    }
+
+    /** 申込のまま到着の記録がない人の数（まとめて印を付ける前の確認用） */
+    public static function countNotArrived(int $eventId): int
+    {
+        $stmt = Database::pdo()->prepare(
+            "SELECT COUNT(*) FROM registrations r LEFT JOIN checkins k ON k.registration_id = r.id
+             WHERE r.event_id = ? AND r.status = 'applied' AND r.no_show_at IS NULL AND k.arrived_at IS NULL"
+        );
+        $stmt->execute([$eventId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** この人の無断キャンセルの回数 */
+    public static function noShowCount(int $customerId): int
+    {
+        $stmt = Database::pdo()->prepare('SELECT COUNT(*) FROM registrations WHERE customer_id = ? AND no_show_at IS NOT NULL');
+        $stmt->execute([$customerId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    // ── 紹介 ─────────────────────────────────────────
+
+    /** この人の紹介で申し込んだ人（新しい順） */
+    public static function referredBy(int $customerId): array
+    {
+        $stmt = Database::pdo()->prepare(self::SELECT . ' WHERE r.referrer_customer_id = ? ORDER BY r.applied_at DESC');
+        $stmt->execute([$customerId]);
         return $stmt->fetchAll();
     }
 
@@ -79,13 +135,13 @@ final class Registrations
             $status = $forceStatus ?? ((!$forceApply && self::isFull($pdo, $event, $gender)) ? 'waitlisted' : 'applied');
             $pdo->prepare(
                 'INSERT INTO registrations (event_id, customer_id, source, status, fee, channel, note, prepaid_at, payment_method,
-                    entry_from, ban_check, consented_at, answers, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                    entry_from, ban_check, consented_at, answers, referrer_customer_id, created_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             )->execute([
                 $eventId, $customerId, $data['source'], $status, $data['fee'], $data['channel'], $data['note'],
                 $data['prepaid'] ? date('Y-m-d H:i:s') : null, $data['prepaid'] ? $data['payment_method'] : null,
                 $data['entry_from'] ?? null, $data['ban_check'] ?? 'none', $data['consented_at'] ?? null, $data['answers'] ?? null,
-                $adminId,
+                $data['referrer_customer_id'] ?? null, $adminId,
             ]);
             $id = (int) $pdo->lastInsertId();
             $pdo->commit();

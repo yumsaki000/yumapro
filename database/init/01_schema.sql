@@ -104,6 +104,7 @@ CREATE TABLE events (
     faq                 TEXT         NULL COMMENT 'この回のよくある質問（Q./A.）。空欄なら設定の共通のものを出す',
     description         TEXT         NULL COMMENT '公開ページの本文（■見出し・・箇条書き・**太字** が使える）',
     photo               VARCHAR(64)  NULL COMMENT '表紙の写真のファイル名（storage/photos に保存。/photos/{名前} で表示）',
+    announced_at        DATETIME     NULL COMMENT '「次回のお知らせ」の登録者に募集開始を知らせた日時',
     extra               JSON         NULL COMMENT '形式ごとの追加設定',
     status              ENUM('draft', 'open', 'closed', 'done', 'cancelled') NOT NULL DEFAULT 'draft'
                         COMMENT '下書き／募集中／締切／終了／中止',
@@ -155,12 +156,14 @@ CREATE TABLE customers (
     crew_left_at    DATE         NULL COMMENT 'クルー脱退日',
     crew_note       VARCHAR(255) NULL COMMENT 'クルーについての運営メモ（連絡の希望など）',
     access_token    VARCHAR(64)  NOT NULL COMMENT '個人専用URL用のランダム文字列',
+    referral_code   VARCHAR(16)  NULL COMMENT '友だち招待のリンク用の文字列（/?ref=）。初めて使うときに作る',
     legacy_no       INT UNSIGNED NULL COMMENT '移行元（今のスプレッドシートの声掛けリスト）の番号',
     legacy_data     JSON         NULL COMMENT '移行元の行をそのまま（使い道が決まっていない列も失わないため）',
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_customers_access_token (access_token),
+    UNIQUE KEY uq_customers_referral_code (referral_code),
     UNIQUE KEY uq_customers_legacy_no (legacy_no),
     KEY idx_customers_email (email),
     KEY idx_customers_phone (phone),
@@ -295,6 +298,8 @@ CREATE TABLE registrations (
     entry_from          VARCHAR(30)  NULL COMMENT 'どの窓口のリンクから来たか（?from= の値。集客の集計用）',
     ban_check           ENUM('none', 'suspect', 'confirmed', 'cleared') NOT NULL DEFAULT 'none'
                         COMMENT '申込時の出禁チェック: 該当なし／名前だけ一致（要確認）／連絡先が一致（確定）／運営が確認して別人と判断',
+    referrer_customer_id INT UNSIGNED NULL COMMENT '友だち招待のリンクから来たときの紹介者',
+    no_show_at          DATETIME     NULL COMMENT '無断キャンセル（連絡なしで来なかった）の印を付けた日時',
     consented_at        DATETIME     NULL COMMENT '申込フォームで注意事項などに同意した日時',
     note                VARCHAR(255) NULL COMMENT '運営メモ',
     applied_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申込元での申込日時',
@@ -308,10 +313,37 @@ CREATE TABLE registrations (
     UNIQUE KEY uq_registrations_external (event_id, source, external_id),
     KEY idx_registrations_event_status (event_id, status, applied_at),
     KEY idx_registrations_customer (customer_id, applied_at),
+    KEY idx_registrations_referrer (referrer_customer_id),
     CONSTRAINT fk_registrations_event FOREIGN KEY (event_id) REFERENCES events (id),
     CONSTRAINT fk_registrations_customer FOREIGN KEY (customer_id) REFERENCES customers (id),
+    CONSTRAINT fk_registrations_referrer FOREIGN KEY (referrer_customer_id) REFERENCES customers (id) ON DELETE SET NULL,
     CONSTRAINT fk_registrations_import_batch FOREIGN KEY (import_batch_id) REFERENCES import_batches (id) ON DELETE SET NULL,
     CONSTRAINT fk_registrations_created_by FOREIGN KEY (created_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 次回のお知らせの登録（こくちーずの「興味ありリスト」にあたる）。形式ごとに、募集を始めたらメールで知らせる
+-- 顧客台帳とは別に持つ（申込したことのない人も登録できる）。受け取りの同意は、確認メールのリンクを開いた日時で残す
+CREATE TABLE follows (
+    id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    email           VARCHAR(255) NOT NULL,
+    token           CHAR(32)     NOT NULL COMMENT '確認・変更・停止のリンク用のランダム文字列',
+    confirmed_at    DATETIME     NULL COMMENT '確認メールのリンクを開いた日時（受け取りに同意した日時）',
+    unsubscribed_at DATETIME     NULL COMMENT '受け取りを止めた日時',
+    confirm_sent_at DATETIME     NULL COMMENT '確認メールを最後に送った日時（続けて送らないため）',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_follows_email (email),
+    UNIQUE KEY uq_follows_token (token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE follow_types (
+    follow_id       INT UNSIGNED NOT NULL,
+    event_type_id   INT UNSIGNED NOT NULL,
+    PRIMARY KEY (follow_id, event_type_id),
+    KEY idx_follow_types_type (event_type_id),
+    CONSTRAINT fk_follow_types_follow FOREIGN KEY (follow_id) REFERENCES follows (id) ON DELETE CASCADE,
+    CONSTRAINT fk_follow_types_type FOREIGN KEY (event_type_id) REFERENCES event_types (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 当日受付（1申込につき1行。到着と入金を同時に記録）
@@ -364,15 +396,20 @@ CREATE TABLE mail_log (
 -- 経費（1回に複数項目）
 CREATE TABLE expenses (
     id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    event_id        INT UNSIGNED NOT NULL,
+    event_id        INT UNSIGNED NULL COMMENT 'どのイベントの経費か。NULL はイベントに付かない経費（サーバー代・広告費など）',
     item            VARCHAR(100) NOT NULL,
     amount          INT          NOT NULL COMMENT '円',
+    account         VARCHAR(30)  NULL COMMENT '勘定科目（確定申告の区分。Expenses::ACCOUNTS）',
+    paid_on         DATE         NULL COMMENT '支払った日。空ならイベントの日（イベントに付かない経費は必須）',
+    payee           VARCHAR(100) NULL COMMENT '支払先（店・会場・講師など）',
+    has_receipt     TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '領収書・レシートを保管している',
     memo            VARCHAR(255) NULL,
     created_by      INT UNSIGNED NULL,
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_expenses_event (event_id),
+    KEY idx_expenses_paid_on (paid_on),
     CONSTRAINT fk_expenses_event FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
     CONSTRAINT fk_expenses_admin FOREIGN KEY (created_by) REFERENCES admins (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

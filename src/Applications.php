@@ -167,7 +167,7 @@ final class Applications
      *
      * @return array{registration: array, existing: bool}
      */
-    public static function submit(array $event, array $values, array $answers, ?string $entryFrom): array
+    public static function submit(array $event, array $values, array $answers, ?string $entryFrom, ?string $referralCode = null): array
     {
         $customer = Customers::findByPhoneOrEmail($values['phone'], $values['email']);
         if ($customer !== null) {
@@ -194,6 +194,10 @@ final class Applications
             Database::pdo()->prepare('DELETE FROM registrations WHERE id = ?')->execute([$existing['id']]);
         }
 
+        // 友だち招待のリンクから来たとき：紹介者を記録する（自分のリンクから自分で申し込んだときは記録しない）
+        $referrer = $referralCode !== null ? Customers::findByReferralCode($referralCode) : null;
+        $referrerId = $referrer !== null && (int) $referrer['id'] !== $customerId ? (int) $referrer['id'] : null;
+
         $isCrew = $customer !== null && $customer['crew_status'] === 'active';
         $result = Registrations::create((int) $event['id'], $customerId, [
             'fee' => Events::feeFor($event, $isCrew ? ($customer['gender'] ?? $values['gender']) : $values['gender'], $isCrew),
@@ -206,6 +210,7 @@ final class Applications
             'ban_check' => $banCheck,
             'consented_at' => date('Y-m-d H:i:s'),
             'answers' => $answers === [] ? null : json_encode($answers, JSON_UNESCAPED_UNICODE),
+            'referrer_customer_id' => $referrerId,
         ], null, false, $banCheck === 'confirmed' ? 'waitlisted' : null);
 
         $registration = Registrations::find($result['id']);

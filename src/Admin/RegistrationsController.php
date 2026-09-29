@@ -201,6 +201,19 @@ final class RegistrationsController
         redirect(self::back('/admin/events/' . $registration['event_id']));
     }
 
+    /** 無断キャンセル（連絡なしで来なかった）の印を付ける／外す */
+    public static function noShow(string $id): void
+    {
+        Auth::requireAdmin();
+        $registration = Registrations::find((int) $id) ?? abort_not_found();
+        $noShow = Form::checked($_POST, 'no_show');
+        Registrations::setNoShow((int) $registration['id'], $noShow);
+        Session::flash('notice', $noShow
+            ? "「{$registration['customer_name']}」を無断キャンセルにしました。"
+            : "「{$registration['customer_name']}」の無断キャンセルを外しました。");
+        redirect(self::back('/admin/events/' . $registration['event_id']));
+    }
+
     /**
      * 申込の項目を読む。
      *

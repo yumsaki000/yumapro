@@ -50,6 +50,7 @@ final class MyPageController
                 $past[] = $r;
             }
         }
+        $referralOn = Settings::get('referral_enabled') === '1' && $customer['banned_at'] === null;
         echo View::render('my/index', [
             'title' => 'お申込みの確認',
             'customer' => $customer,
@@ -61,6 +62,9 @@ final class MyPageController
             'contact' => Settings::get('contact_text'),
             'crewStatus' => $customer['crew_status'] ?? 'none',
             'isCrew' => Crew::isActive($customer),
+            'referralCode' => $referralOn ? Customers::referralCode((int) $customer['id']) : null,
+            'referralText' => Settings::get('referral_text'),
+            'referralCount' => $referralOn ? count(array_filter(Registrations::referredBy((int) $customer['id']), fn ($r) => $r['status'] !== 'cancelled')) : 0,
         ]);
     }
 
