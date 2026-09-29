@@ -7,6 +7,7 @@ MINATO のイベントの告知・申込・当日受付・会計を少人数で�
 - 今のイベント管理シートの分析：[docs/current-sheet-analysis.md](docs/current-sheet-analysis.md)
 - 公式サイトの調査：[docs/official-site.md](docs/official-site.md)
 - ヒアリングシート（統合版）の質問一覧：[docs/hearing-sheet.md](docs/hearing-sheet.md)
+- 管理画面の使い方（運営メンバー向け）：[docs/admin-guide.md](docs/admin-guide.md)
 - Mac での開発環境づくり：[docs/setup-mac.md](docs/setup-mac.md)
 - Xserver への配置（案）：[docs/deploy-xserver.md](docs/deploy-xserver.md)
 - 今のスプレッドシートからの移行：[docs/migration.md](docs/migration.md)

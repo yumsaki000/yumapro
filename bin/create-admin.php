@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 /*
  * 管理画面のアカウントを作る（またはパスワードを再設定する）。
+ * 管理画面の「運営メンバー」でも同じことができる。最初の1人を作るときと、全員ログインできなくなったときに使う。
  *
  *   php bin/create-admin.php           新しく作る
  *   php bin/create-admin.php --reset   既存のアカウントのパスワードを再設定する
@@ -17,10 +18,8 @@ if (PHP_SAPI !== 'cli') {
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 
+use App\Admins;
 use App\Auth;
-use App\Database;
-
-const MIN_PASSWORD_LENGTH = 10;
 
 function ask(string $label, bool $secret = false): string
 {
@@ -48,14 +47,14 @@ function fail(string $message): never
  */
 function askPassword(): string
 {
-    $password = ask('パスワード（' . MIN_PASSWORD_LENGTH . '文字以上。空のままEnterで自動作成）: ', true);
+    $password = ask('パスワード（' . Admins::MIN_PASSWORD_LENGTH . '文字以上。空のままEnterで自動作成）: ', true);
     if ($password === '') {
-        $password = rtrim(strtr(base64_encode(random_bytes(12)), '+/', '-_'), '=');
+        $password = Admins::generatePassword();
         fwrite(STDOUT, "自動で作ったパスワード: {$password}\n（この画面にしか出ません。本人に安全な方法で伝えてください）\n");
         return $password;
     }
-    if (mb_strlen($password) < MIN_PASSWORD_LENGTH) {
-        fail('パスワードは' . MIN_PASSWORD_LENGTH . '文字以上にしてください。');
+    if (mb_strlen($password) < Admins::MIN_PASSWORD_LENGTH) {
+        fail('パスワードは' . Admins::MIN_PASSWORD_LENGTH . '文字以上にしてください。');
     }
     if (ask('もう一度入力: ', true) !== $password) {
         fail('パスワードが一致しません。');
@@ -64,44 +63,32 @@ function askPassword(): string
 }
 
 $reset = in_array('--reset', $argv, true);
-$pdo = Database::pdo();
 
 $loginId = ask('ログインID（半角英数字と . _ -、3〜64文字）: ');
 if (!Auth::isValidLoginId($loginId)) {
     fail('ログインIDは半角英数字と . _ - の3〜64文字にしてください。');
 }
 
-$stmt = $pdo->prepare('SELECT id FROM admins WHERE login_id = ?');
-$stmt->execute([$loginId]);
-$existingId = $stmt->fetchColumn();
-
 if ($reset) {
-    if ($existingId === false) {
-        fail("ログインID「{$loginId}」のアカウントはありません。");
-    }
-    $pdo->prepare('UPDATE admins SET password_hash = ? WHERE id = ?')
-        ->execute([password_hash(askPassword(), PASSWORD_DEFAULT), $existingId]);
-    $pdo->prepare('DELETE FROM admin_login_attempts WHERE login_id = ?')->execute([$loginId]);
+    $member = Admins::findByLoginId($loginId) ?? fail("ログインID「{$loginId}」のアカウントはありません。");
+    Admins::setPassword((int) $member['id'], askPassword());
     fwrite(STDOUT, "「{$loginId}」のパスワードを再設定しました。\n");
     exit(0);
 }
 
-if ($existingId !== false) {
+if (Admins::loginIdExists($loginId)) {
     fail("ログインID「{$loginId}」はもう使われています。パスワードの再設定は --reset を付けて実行してください。");
 }
 
 $displayName = ask('表示名（画面に出る名前）: ');
-if ($displayName === '' || mb_strlen($displayName) > 100) {
-    fail('表示名は1〜100文字で入れてください。');
-}
-
-$isFirst = (int) $pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn() === 0;
+$isFirst = Admins::all() === [];
 $defaultRole = $isFirst ? 'owner' : 'staff';
-$role = ask("権限（owner＝アカウント管理もできる / staff）[{$defaultRole}]: ") ?: $defaultRole;
-if (!in_array($role, ['owner', 'staff'], true)) {
-    fail('権限は owner か staff にしてください。');
+$role = ask("権限（owner＝メンバー管理もできる / staff）[{$defaultRole}]: ") ?: $defaultRole;
+
+$errors = Admins::validate($loginId, $displayName, $role, null, true);
+if ($errors !== []) {
+    fail(implode(PHP_EOL, $errors));
 }
 
-$pdo->prepare('INSERT INTO admins (login_id, password_hash, display_name, role) VALUES (?, ?, ?, ?)')
-    ->execute([$loginId, password_hash(askPassword(), PASSWORD_DEFAULT), $displayName, $role]);
+Admins::create($loginId, $displayName, $role, askPassword());
 fwrite(STDOUT, "アカウント「{$loginId}」（{$displayName}・{$role}）を作りました。\n");

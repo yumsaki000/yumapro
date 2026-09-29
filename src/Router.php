@@ -22,6 +22,13 @@ final class Router
         $this->routes['POST'][$path] = $handler;
     }
 
+    /** 表示（GET）と送信（POST）を同じ処理で受ける（入力フォーム用） */
+    public function form(string $path, callable $handler): void
+    {
+        $this->get($path, $handler);
+        $this->post($path, $handler);
+    }
+
     public function dispatch(string $method, string $uri): void
     {
         $method = $method === 'HEAD' ? 'GET' : $method;
@@ -39,7 +46,6 @@ final class Router
             }
         }
 
-        http_response_code(404);
-        echo View::render('errors/404', ['title' => 'ページが見つかりません']);
+        abort_not_found();
     }
 }

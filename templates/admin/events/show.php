@@ -1,0 +1,108 @@
+<?php
+/** @var array $event */
+/** @var array $registrations */
+$id = (int) $event['id'];
+$capacity = $event['capacity'] !== null ? (int) $event['capacity'] : null;
+$prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== 'cancelled' && $r['prepaid_at'] !== null));
+?>
+<section class="card">
+    <div class="toolbar">
+        <h1><?= e($event['title']) ?></h1>
+        <span>
+            <span class="badge"><?= e($event['type_name']) ?></span>
+            <span class="<?= e(App\Events::STATUS_BADGES[$event['status']] ?? 'badge') ?>"><?= e(App\Events::STATUSES[$event['status']] ?? $event['status']) ?></span>
+        </span>
+    </div>
+
+    <dl class="kv">
+        <dt>日時</dt><dd><?= e(fmt_dt($event['starts_at'])) ?><?= $event['ends_at'] !== null ? ' 〜 ' . e(fmt_dt($event['ends_at'])) : '' ?></dd>
+        <dt>会場</dt><dd><?= e($event['venue_name'] ?? '—') ?><?php if ($event['venue_url'] !== null): ?> <a href="<?= e($event['venue_url']) ?>" target="_blank" rel="noopener">地図</a><?php endif; ?><?php if ($event['venue_address'] !== null): ?><br><span class="text-muted"><?= e($event['venue_address']) ?></span><?php endif; ?></dd>
+        <dt>参加費</dt><dd><?= e(yen($event['fee'])) ?><?php if ($event['fee_male'] !== null || $event['fee_female'] !== null): ?>（男性 <?= e(yen($event['fee_male'] ?? $event['fee'])) ?>／女性 <?= e(yen($event['fee_female'] ?? $event['fee'])) ?>）<?php endif; ?>・<?= e(App\Events::PAYMENT_TIMINGS[$event['payment_timing']] ?? '') ?></dd>
+        <dt>定員</dt><dd><?= $capacity === null ? '上限なし' : $capacity . '人' ?><?php if ($event['capacity_male'] !== null || $event['capacity_female'] !== null): ?>（男性 <?= e((string) ($event['capacity_male'] ?? '—')) ?>／女性 <?= e((string) ($event['capacity_female'] ?? '—')) ?>）<?php endif; ?></dd>
+        <dt>申込締切</dt><dd><?= e(fmt_dt($event['apply_deadline'])) ?></dd>
+        <dt>キャンセル期限</dt><dd><?= e(fmt_dt($event['cancel_deadline'])) ?></dd>
+        <?php if ($event['description'] !== null): ?><dt>説明</dt><dd><pre class="plain"><?= e($event['description']) ?></pre></dd><?php endif; ?>
+    </dl>
+
+    <div class="stats">
+        <div class="stat"><div class="stat__label">申込</div><div class="stat__value"><?= (int) $event['applied_count'] ?><?= $capacity !== null ? '<span class="text-muted"> / ' . $capacity . '</span>' : '' ?></div></div>
+        <div class="stat"><div class="stat__label">キャンセル待ち</div><div class="stat__value"><?= (int) $event['waitlisted_count'] ?></div></div>
+        <?php if ($event['payment_timing'] === 'prepaid'): ?>
+            <div class="stat"><div class="stat__label">入金確認済み</div><div class="stat__value"><?= $prepaidCount ?></div></div>
+        <?php endif; ?>
+        <div class="stat"><div class="stat__label">到着</div><div class="stat__value"><?= (int) $event['arrived_count'] ?></div></div>
+    </div>
+
+    <div class="actions">
+        <a class="button button--primary" href="/admin/events/<?= $id ?>/registrations/new">申込を追加</a>
+        <a class="button" href="/admin/events/<?= $id ?>/checkin">当日受付</a>
+        <a class="button" href="/admin/events/<?= $id ?>/accounting">会計</a>
+        <a class="button" href="/admin/events/<?= $id ?>/edit">編集</a>
+        <form class="inline-form" method="post" action="/admin/events/<?= $id ?>/copy">
+            <?= csrf_field() ?>
+            <button type="submit" class="button">複製</button>
+        </form>
+    </div>
+
+    <form method="post" action="/admin/events/<?= $id ?>/status" class="actions" style="margin-top: 12px;" onsubmit="return this.status.value !== 'cancelled' || confirm('この回を中止にします。よろしいですか？');">
+        <?= csrf_field() ?>
+        <label>状態を変える：
+            <select name="status">
+                <?php foreach (App\Events::STATUSES as $code => $label): ?>
+                    <option value="<?= e($code) ?>"<?= $event['status'] === $code ? ' selected' : '' ?>><?= e($label) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <button type="submit" class="button button--small">変更</button>
+    </form>
+</section>
+
+<section class="card">
+    <h2>申込者（<?= count($registrations) ?>人）</h2>
+    <?php if ($registrations === []): ?>
+        <p class="text-muted">まだ申込がありません。</p>
+    <?php else: ?>
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                    <tr><th>名前</th><th>状態</th><th class="num">参加費</th><th>入金</th><th>到着</th><th>知った経路</th><th></th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($registrations as $r): ?>
+                        <?php $rid = (int) $r['id']; ?>
+                        <tr class="<?= $r['status'] === 'cancelled' ? 'is-muted' : '' ?>">
+                            <td>
+                                <a href="/admin/customers/<?= (int) $r['customer_id'] ?>"><?= e($r['customer_name']) ?></a>
+                                <?php if ($r['customer_kana'] !== null): ?><br><span class="text-muted"><?= e($r['customer_kana']) ?></span><?php endif; ?>
+                                <?php if ($r['customer_banned_at'] !== null): ?><span class="badge badge--danger">出禁</span><?php endif; ?>
+                            </td>
+                            <td><span class="<?= e(App\Registrations::STATUS_BADGES[$r['status']] ?? 'badge') ?>"><?= e(App\Registrations::STATUSES[$r['status']] ?? $r['status']) ?></span></td>
+                            <td class="num"><?= e(yen($r['fee'])) ?></td>
+                            <td>
+                                <?php if ($r['prepaid_at'] !== null): ?>
+                                    <span class="badge badge--ok">前払い済</span>
+                                <?php elseif ($r['paid_amount'] !== null): ?>
+                                    <span class="badge badge--ok">当日 <?= e(yen($r['paid_amount'])) ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= $r['arrived_at'] !== null ? e(date('H:i', strtotime($r['arrived_at']))) : '<span class="text-muted">—</span>' ?></td>
+                            <td class="wrap"><?= e($r['channel'] ?? '—') ?></td>
+                            <td>
+                                <div class="actions">
+                                    <a class="button button--small" href="/admin/registrations/<?= $rid ?>/edit">詳細</a>
+                                    <?php if ($r['status'] === 'cancelled' || $r['status'] === 'waitlisted'): ?>
+                                        <form class="inline-form" method="post" action="/admin/registrations/<?= $rid ?>/restore"><?= csrf_field() ?><button type="submit" class="button button--small"><?= $r['status'] === 'cancelled' ? '申込に戻す' : '繰り上げ' ?></button></form>
+                                    <?php else: ?>
+                                        <form class="inline-form" method="post" action="/admin/registrations/<?= $rid ?>/cancel" onsubmit="return confirm('キャンセルにします。よろしいですか？');"><?= csrf_field() ?><button type="submit" class="button button--small button--danger">キャンセル</button></form>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+</section>

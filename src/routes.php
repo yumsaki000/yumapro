@@ -2,9 +2,17 @@
 
 declare(strict_types=1);
 
+use App\Admin\AccountingController;
+use App\Admin\ChannelsController;
+use App\Admin\CheckinController;
+use App\Admin\CustomersController;
+use App\Admin\EventsController;
+use App\Admin\MembersController;
+use App\Admin\RegistrationsController;
 use App\Auth;
 use App\Config;
 use App\Database;
+use App\Events;
 use App\Router;
 use App\Session;
 use App\View;
@@ -28,7 +36,7 @@ $router->get('/health', function (): void {
     }
 });
 
-// ── 管理画面 ─────────────────────────────────────────
+// ── 管理画面：ログイン ─────────────────────────────────
 
 $router->get('/admin/login', function (): void {
     if (Auth::user() !== null) {
@@ -75,9 +83,58 @@ $router->post('/admin/logout', function (): void {
     redirect('/admin/login');
 });
 
+// ── 管理画面：トップ ─────────────────────────────────
+
 $router->get('/admin', function (): void {
     $admin = Auth::requireAdmin();
-    echo View::render('admin/home', ['title' => '管理画面', 'admin' => $admin], 'admin/layout');
+    echo View::render('admin/home', [
+        'title' => '管理画面',
+        'admin' => $admin,
+        'upcoming' => Events::upcoming(5),
+    ], 'admin/layout');
 });
+
+// ── 回 ─────────────────────────────────────────────
+$router->get('/admin/events', [EventsController::class, 'index']);
+$router->form('/admin/events/new', [EventsController::class, 'create']);
+$router->get('/admin/events/{id}', [EventsController::class, 'show']);
+$router->form('/admin/events/{id}/edit', [EventsController::class, 'edit']);
+$router->post('/admin/events/{id}/copy', [EventsController::class, 'copy']);
+$router->post('/admin/events/{id}/status', [EventsController::class, 'status']);
+
+// ── 申込（手入力・変更） ─────────────────────────────
+$router->form('/admin/events/{eventId}/registrations/new', [RegistrationsController::class, 'create']);
+$router->form('/admin/registrations/{id}/edit', [RegistrationsController::class, 'edit']);
+$router->post('/admin/registrations/{id}/cancel', [RegistrationsController::class, 'cancel']);
+$router->post('/admin/registrations/{id}/restore', [RegistrationsController::class, 'restore']);
+$router->post('/admin/registrations/{id}/prepaid', [RegistrationsController::class, 'prepaid']);
+
+// ── 当日受付 ─────────────────────────────────────────
+$router->get('/admin/events/{eventId}/checkin', [CheckinController::class, 'index']);
+$router->post('/admin/registrations/{id}/checkin', [CheckinController::class, 'arrive']);
+$router->post('/admin/registrations/{id}/checkin/undo', [CheckinController::class, 'undo']);
+
+// ── 会計 ─────────────────────────────────────────────
+$router->get('/admin/accounting', [AccountingController::class, 'index']);
+$router->get('/admin/events/{eventId}/accounting', [AccountingController::class, 'show']);
+$router->post('/admin/events/{eventId}/expenses', [AccountingController::class, 'addExpense']);
+$router->post('/admin/expenses/{id}/delete', [AccountingController::class, 'deleteExpense']);
+$router->post('/admin/events/{eventId}/organizer', [AccountingController::class, 'organizer']);
+
+// ── 顧客台帳 ─────────────────────────────────────────
+$router->get('/admin/customers', [CustomersController::class, 'index']);
+$router->form('/admin/customers/new', [CustomersController::class, 'create']);
+$router->get('/admin/customers/duplicates', [CustomersController::class, 'duplicates']);
+$router->post('/admin/customers/merge', [CustomersController::class, 'merge']);
+$router->get('/admin/customers/{id}', [CustomersController::class, 'show']);
+$router->form('/admin/customers/{id}/edit', [CustomersController::class, 'edit']);
+$router->post('/admin/customers/{id}/ban', [CustomersController::class, 'ban']);
+
+// ── 設定・運営メンバー ─────────────────────────────────
+$router->form('/admin/channels', [ChannelsController::class, 'index']);
+$router->get('/admin/members', [MembersController::class, 'index']);
+$router->form('/admin/members/new', [MembersController::class, 'create']);
+$router->form('/admin/members/{id}', [MembersController::class, 'edit']);
+$router->post('/admin/members/{id}/password', [MembersController::class, 'password']);
 
 return $router;

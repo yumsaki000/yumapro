@@ -48,6 +48,17 @@ CREATE TABLE event_types (
     UNIQUE KEY uq_event_types_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 「どこで知りましたか」の選択肢（管理画面で増減できる。過去の記録は名前で持つので、消さずに無効にする）
+CREATE TABLE channels (
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name        VARCHAR(50)  NOT NULL,
+    sort_order  INT          NOT NULL DEFAULT 0,
+    is_active   TINYINT(1)   NOT NULL DEFAULT 1 COMMENT '0 にすると選択肢に出さない',
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_channels_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 開催回
 CREATE TABLE events (
     id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -102,6 +113,8 @@ CREATE TABLE customers (
     mail_opt_in_at  DATETIME     NULL COMMENT '案内メールの受け取りに同意した日時（特定電子メール法のため記録）',
     mail_opt_out_at DATETIME     NULL COMMENT '案内メールの配信を停止した日時',
     note            TEXT         NULL COMMENT '運営メモ',
+    banned_at       DATETIME     NULL COMMENT '出禁にした日時（NULL なら出禁でない）',
+    ban_reason      VARCHAR(255) NULL COMMENT '出禁の理由（運営向け）',
     access_token    VARCHAR(64)  NOT NULL COMMENT '個人専用URL用のランダム文字列',
     legacy_no       INT UNSIGNED NULL COMMENT '移行元（今のスプレッドシートの声掛けリスト）の番号',
     legacy_data     JSON         NULL COMMENT '移行元の行をそのまま（使い道が決まっていない列も失わないため）',
@@ -149,9 +162,12 @@ CREATE TABLE registrations (
     raw_data            JSON         NULL COMMENT '移行元の行そのまま（列の対応を後から直せるように）',
     payment_method      VARCHAR(20)  NULL COMMENT 'cash / bank_transfer / paypay / other',
     prepaid_at          DATETIME     NULL COMMENT '前払いの入金を確認した日時',
+    channel             VARCHAR(50)  NULL COMMENT 'どこで知ったか（申込時の選択。channels.name）',
+    note                VARCHAR(255) NULL COMMENT '運営メモ',
     applied_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申込元での申込日時',
     cancelled_at        DATETIME     NULL,
-    import_batch_id     INT UNSIGNED NULL COMMENT 'CSVで取り込んだ場合の取り込み履歴',
+    import_batch_id     INT UNSIGNED NULL COMMENT '移行で取り込んだ場合の取り込み履歴',
+    created_by          INT UNSIGNED NULL COMMENT '手入力した担当者',
     created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -161,7 +177,8 @@ CREATE TABLE registrations (
     KEY idx_registrations_customer (customer_id, applied_at),
     CONSTRAINT fk_registrations_event FOREIGN KEY (event_id) REFERENCES events (id),
     CONSTRAINT fk_registrations_customer FOREIGN KEY (customer_id) REFERENCES customers (id),
-    CONSTRAINT fk_registrations_import_batch FOREIGN KEY (import_batch_id) REFERENCES import_batches (id) ON DELETE SET NULL
+    CONSTRAINT fk_registrations_import_batch FOREIGN KEY (import_batch_id) REFERENCES import_batches (id) ON DELETE SET NULL,
+    CONSTRAINT fk_registrations_created_by FOREIGN KEY (created_by) REFERENCES admins (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 当日受付（1申込につき1行。到着と入金を同時に記録）

@@ -13,7 +13,8 @@ MINATO のイベント（リトリート／女子会／自己啓発／合コン�
 ## 現状
 
 - 要件整理前（林さんの回答待ち）
-- できているもの：準備中ページ、`/health`、テーブル定義（案）、管理画面のログイン（`/admin`）、CSRF対策の共通の仕組み、顧客の移行スクリプト（`docs/migration.md`）
+- できているもの：準備中ページ、`/health`、テーブル定義（案）、管理画面のログイン（`/admin`）、CSRF対策の共通の仕組み、顧客の移行スクリプト（`docs/migration.md`）、管理画面の各機能（運営メンバー管理、回の作成・複製、申込の手入力、顧客台帳・名寄せ・出禁、当日受付、会計、「どこで知りましたか」の選択肢）。使い方は `docs/admin-guide.md`
+- まだのもの：参加者向けの掲示板と申込フォーム（項目・同意文はヒアリング待ち）、予約確認メール、問い合わせ、案内メール
 - 方針：こくちーずのような自前のイベント掲示板＋申込フォームで新規集客（特に女子会）をする。申込は掲示板のフォームに一本化し、集客の窓口（こくちーず・公式サイト・SNS）からはリンクする。スタッフの手入力と、今のスプレッドシートからの1回だけの移行も受ける（`docs/requirements.md` の 1-2・1-3・決定事項）。受け付け・名寄せ・出禁チェックの設計は `docs/data-intake.md`
 - 最初に作る形式は女子会の見込み（ヒアリングで確認中）
 - 形式が決まるまでは、形式に依存しない部分（管理画面ログイン、回の作成・複製、顧客台帳、当日受付、会計）から作る
@@ -48,11 +49,15 @@ public/      ドキュメントルート（index.php・.htaccess・assets）。�
 src/         PHP コード。App\ 名前空間 → src/ に対応（bootstrap.php の自前オートローダー）
   routes.php URL と処理の対応
   Auth.php / Csrf.php / Session.php  ログイン・CSRF・セッション
+  Form.php       フォームの値の受け取り方（文字列・整数・日時・選択肢）
   Normalize.php  電話・メール・名前・フリガナ・SNSのそろえ方（名寄せ・出禁チェック・移行で共通）
+  Events.php / Customers.php / Registrations.php / Checkins.php / Expenses.php / Admins.php / Channels.php
+                 テーブルごとのDB処理。定員判定・受付などトランザクションが要る処理はここに置く
+  Admin/         管理画面の各画面の処理（URLごとに routes.php から呼ぶ）
   Migration/     今のスプレッドシートからの移行
 bin/         コマンドラインで使うもの（アカウント作成、移行）。Web には出ない
 tests/       テスト（依存なしの tests/run.php で流す）
-templates/   画面（layout.php で包む）。View::render('名前', [...])
+templates/   画面（layout.php で包む）。View::render('名前', [...])。管理画面は admin/layout.php で包む
 database/
   init/        テーブル定義と初期データ。Docker の初回起動で番号順に流れる
   migrations/  本番投入後の差分 SQL

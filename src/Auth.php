@@ -127,6 +127,18 @@ final class Auth
         return $admin;
     }
 
+    /**
+     * オーナーだけができる操作の先頭で呼ぶ（運営メンバーの管理など）
+     */
+    public static function requireOwner(): array
+    {
+        $admin = self::requireAdmin();
+        if ($admin['role'] !== 'owner') {
+            abort_forbidden('この操作はオーナーだけができます。');
+        }
+        return $admin;
+    }
+
     public static function logout(): void
     {
         Session::start();
