@@ -50,6 +50,12 @@ final class CoursesController
     {
         $admin = Auth::requireAdmin();
         $course = Courses::find((int) $id) ?? abort_not_found();
+        self::renderShow($admin, $course, null, []);
+    }
+
+    /** 講座の画面。$addValues は回の追加で誤りがあったときの入力（書いた内容を消さずに戻す） */
+    private static function renderShow(array $admin, array $course, ?array $addValues, array $addErrors): void
+    {
         $purchases = array_filter(array_merge(Courses::purchases('pending'), Courses::purchases('paid')), fn ($p) => (int) $p['course_id'] === (int) $course['id']);
         echo View::render('admin/courses/show', [
             'title' => $course['title'],
@@ -58,6 +64,8 @@ final class CoursesController
             'lessons' => Courses::lessons((int) $course['id']),
             'purchases' => array_values($purchases),
             'baseUrl' => rtrim((string) Config::get('APP_URL', ''), '/'),
+            'addValues' => $addValues,
+            'addErrors' => $addErrors,
         ], 'admin/layout');
     }
 
@@ -99,12 +107,23 @@ final class CoursesController
         $course = Courses::find((int) $courseId) ?? abort_not_found();
         [$values, $errors] = self::readLesson($_POST);
         if ($errors !== []) {
-            Session::flash('error', implode(' ', $errors));
-        } else {
-            Courses::addLesson((int) $course['id'], $values);
-            Session::flash('notice', "「{$values['title']}」を追加しました。");
+            // 書いた説明を消さないよう、入力を残したまま講座の画面に戻す（動画の URL も書いたまま）
+            $values['youtube_raw'] = Form::str($_POST, 'youtube');
+            self::renderShow($admin, $course, $values, $errors);
+            return;
         }
-        redirect('/admin/courses/' . $course['id']);
+        Courses::addLesson((int) $course['id'], $values);
+        Session::flash('notice', "「{$values['title']}」を追加しました。続けて次の回も追加できます。");
+        redirect('/admin/courses/' . $course['id'] . '#add-lesson');
+    }
+
+    /** 回の順番を1つ上か下へ */
+    public static function moveLesson(string $id): void
+    {
+        Auth::requireAdmin();
+        $lesson = Courses::findLesson((int) $id) ?? abort_not_found();
+        Courses::moveLesson((int) $lesson['id'], Form::choice($_POST, 'direction', ['up', 'down'], 'up'));
+        redirect('/admin/courses/' . $lesson['course_id'] . '#lessons');
     }
 
     public static function editLesson(string $id): void
@@ -116,6 +135,7 @@ final class CoursesController
         $errors = [];
         if (is_post()) {
             [$values, $errors] = self::readLesson($_POST);
+            $values['youtube_raw'] = Form::str($_POST, 'youtube');
             if ($errors === []) {
                 Courses::updateLesson((int) $lesson['id'], $values);
                 Session::flash('notice', "「{$values['title']}」を保存しました。");

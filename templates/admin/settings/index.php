@@ -6,7 +6,7 @@
 ?>
 <section class="card">
     <h1>設定</h1>
-    <p class="text-muted">掲示板・申込フォーム・メールの文言です。空欄にすると既定の文に戻ります。メールの本文では {name} のような言葉が、その申込の内容に置き換わります。ほかの設定：<a href="/admin/channels">「どこで知りましたか」の選択肢</a></p>
+    <p class="text-muted">掲示板・申込フォーム・メールの文言です。空欄にすると既定の文に戻ります。メールの本文では {name} のような言葉が、その申込の内容に置き換わります。ほかの設定：<a href="/admin/channels">「どこで知りましたか」の選択肢</a>・<a href="/admin/official-site">公式サイトとの連携（貼るリンク・埋め込みコード）</a></p>
     <?php if ($errors !== []): ?>
         <div class="alert alert--error" role="alert"><ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
     <?php endif; ?>

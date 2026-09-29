@@ -17,7 +17,8 @@ use App\View;
 final class SettingsController
 {
     private const SECTIONS = [
-        '掲示板' => ['site_tagline', 'site_lead', 'site_intro', 'event_faq', 'contact_text', 'official_line_url', 'privacy_url'],
+        '掲示板' => ['site_tagline', 'site_lead', 'site_intro', 'event_faq', 'community_intro', 'contact_text', 'official_line_url', 'privacy_url'],
+        '公式サイトとのつながり' => ['public_name', 'official_site_url', 'official_about_url', 'official_menu', 'tokushoho_url', 'instagram_url', 'embed_origins'],
         '運営への通知' => ['staff_notify_email', 'staff_notify_all'],
         '申込フォームの同意文' => ['notice_text', 'payment_text', 'cancel_policy_default', 'bank_account'],
         'メールの差出人と署名' => ['mail_from_name', 'mail_from_address', 'mail_signature'],
@@ -55,7 +56,7 @@ final class SettingsController
                     $errors[] = "運営への通知メールの宛先「{$address}」の形が正しくありません。";
                 }
             }
-            foreach (['official_line_url', 'privacy_url', 'crew_terms_url', 'crew_policy_url'] as $key) {
+            foreach (['official_line_url', 'privacy_url', 'crew_terms_url', 'crew_policy_url', 'official_site_url', 'official_about_url', 'tokushoho_url', 'instagram_url'] as $key) {
                 if (($values[$key] ?? '') !== '' && !preg_match('#\Ahttps?://#i', $values[$key])) {
                     $errors[] = Settings::ITEMS[$key][0] . 'は http:// か https:// で始めてください。';
                 }
@@ -74,6 +75,21 @@ final class SettingsController
             'values' => Settings::all(),
             'errors' => $errors,
             'fromAddress' => Mailer::fromAddress(),
+        ], 'admin/layout');
+    }
+
+    /**
+     * 公式サイト（WordPress）に貼るもの：ボタンのリンク先・回の一覧の埋め込みコード・RSS
+     */
+    public static function officialSite(): void
+    {
+        $admin = Auth::requireAdmin();
+        echo View::render('admin/settings/official', [
+            'title' => '公式サイトとの連携',
+            'admin' => $admin,
+            'appUrl' => app_url(),
+            'officialUrl' => Settings::get('official_site_url'),
+            'types' => \App\Events::types(),
         ], 'admin/layout');
     }
 }

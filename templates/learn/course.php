@@ -10,12 +10,12 @@
     <p><a href="/learn">← 講座一覧</a></p>
     <h1><?= e($course['title']) ?></h1>
     <p><span class="badge"><?= e(App\Courses::ACCESS[$course['access']] ?? '') ?></span><?php if ($course['access'] === 'paid' && $course['price'] !== null): ?> <span class="badge"><?= e(yen($course['price'])) ?></span><?php endif; ?><?php if ($course['access'] === 'paid' && (int) $course['crew_included'] === 1): ?> <span class="badge badge--navy">クルーは無料</span><?php endif; ?></p>
-    <?php if ($course['description'] !== null): ?><div><?= App\Courses::formatBody($course['description']) ?></div><?php endif; ?>
+    <?php if ($course['description'] !== null): ?><div class="rich"><?= App\Courses::formatBody($course['description']) ?></div><?php endif; ?>
 
     <?php if ($lock === 'login'): ?>
         <p class="warning-box">続きを見るには<a href="/login?next=<?= e(rawurlencode('/learn/' . $course['slug'])) ?>">ログイン</a>してください（メールでリンクが届きます）。<?php if ($course['access'] === 'crew'): ?>クルーの方がご覧いただけます。<a href="/crew">クルーになる</a><?php endif; ?></p>
     <?php elseif ($lock === 'crew'): ?>
-        <p class="warning-box">この講座はクルー限定です。<a href="/crew">クルーに申し込む</a></p>
+        <p class="warning-box">この講座はクルー専用です。<a href="/crew">クルーに申し込む</a></p>
     <?php elseif ($lock === 'pending'): ?>
         <p class="alert alert--info">お申込みを受け付けています。入金を確認しましたらご覧いただけます（メールでお知らせします）。</p>
     <?php elseif ($lock === 'buy'): ?>

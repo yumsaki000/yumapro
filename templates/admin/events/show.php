@@ -25,7 +25,10 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
         <dt>定員</dt><dd><?= $capacity === null ? '上限なし' : $capacity . '人' ?><?php if ($event['capacity_male'] !== null || $event['capacity_female'] !== null): ?>（男性 <?= e((string) ($event['capacity_male'] ?? '—')) ?>／女性 <?= e((string) ($event['capacity_female'] ?? '—')) ?>）<?php endif; ?></dd>
         <dt>申込締切</dt><dd><?= e(fmt_dt($event['apply_deadline'])) ?></dd>
         <dt>キャンセル期限</dt><dd><?= e(fmt_dt($event['cancel_deadline'])) ?></dd>
-        <?php if ($event['description'] !== null): ?><dt>説明</dt><dd><pre class="plain"><?= e($event['description']) ?></pre></dd><?php endif; ?>
+        <dt>掲載内容</dt><dd><?php
+            $filled = array_filter(['一言紹介' => 'summary', '安心ポイント' => 'highlights', '内容' => 'description', 'おすすめ' => 'recommend', 'スケジュール' => 'timetable', '持ち物' => 'belongings', '地図' => 'map_query'], fn ($f) => trim((string) $event[$f]) !== '');
+            echo $filled === [] ? '<span class="text-muted">まだ入っていません（編集から）</span>' : e(implode('・', array_keys($filled)));
+        ?></dd>
     </dl>
 
     <div class="stats">
@@ -42,6 +45,7 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
         <a class="button" href="/admin/events/<?= $id ?>/checkin">当日受付</a>
         <a class="button" href="/admin/events/<?= $id ?>/accounting">会計</a>
         <a class="button" href="/admin/events/<?= $id ?>/edit">編集</a>
+        <a class="button" href="/admin/events/<?= $id ?>/preview">ページを確認</a>
         <form class="inline-form" method="post" action="/admin/events/<?= $id ?>/copy">
             <?= csrf_field() ?>
             <button type="submit" class="button">複製</button>
@@ -62,18 +66,52 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
 </section>
 
 <section class="card">
-    <h2>申込フォームへのリンク</h2>
-    <?php if ($event['status'] === 'open'): ?>
-        <p class="text-muted">窓口ごとに分けたリンクです。貼った場所ごとの申込数が「集計」で分かります。</p>
-        <ul class="copy-list">
-            <li>共通：<code><?= e($baseUrl) ?>/e/<?= e($event['slug']) ?></code></li>
-            <?php foreach (App\Stats::ENTRY_KEYS as $key => $label): ?>
-                <li><?= e($label) ?>：<code><?= e($baseUrl) ?>/e/<?= e($event['slug']) ?>?from=<?= e($key) ?></code></li>
-            <?php endforeach; ?>
-        </ul>
-    <?php else: ?>
-        <p class="text-muted">状態を「募集中」にすると、掲示板に出て申込を受け付けます。</p>
+    <h2>告知に使うリンクと文面</h2>
+    <?php if ($event['status'] !== 'open'): ?>
+        <p class="alert alert--info">いまは「<?= e(App\Events::STATUSES[$event['status']] ?? '') ?>」です。状態を「募集中」にすると、掲示板に出て申し込めるようになります。</p>
     <?php endif; ?>
+    <p class="text-muted">貼る場所を選ぶと、その場所用のリンク（どこから申込が来たかが「集計」で分かる）に変わります。こくちーずの説明欄や Instagram・LINE にそのまま貼れます。</p>
+    <div class="announce" data-base="<?= e($baseUrl . '/e/' . $event['slug']) ?>">
+        <label class="form__field">
+            <span class="form__label">貼る場所</span>
+            <select class="announce__channel">
+                <option value="">共通（場所を分けない）</option>
+                <?php foreach (App\Stats::ENTRY_KEYS as $key => $label): ?>
+                    <option value="<?= e($key) ?>"><?= e($label) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label class="form__field">
+            <span class="form__label">リンク</span>
+            <input type="text" class="announce__url" readonly value="<?= e($baseUrl . '/e/' . $event['slug']) ?>">
+        </label>
+        <label class="form__field">
+            <span class="form__label">告知文</span>
+            <textarea class="announce__text" rows="12" readonly data-template="<?= e(App\Announce::text($event, '{URL}')) ?>"><?= e(App\Announce::text($event, $baseUrl . '/e/' . $event['slug'])) ?></textarea>
+        </label>
+        <div class="actions">
+            <button type="button" class="button button--small" data-copy-from=".announce__url">リンクをコピー</button>
+            <button type="button" class="button button--small" data-copy-from=".announce__text">告知文をコピー</button>
+        </div>
+    </div>
+    <script>
+    document.querySelectorAll('.announce').forEach(function (box) {
+        var select = box.querySelector('.announce__channel'), url = box.querySelector('.announce__url'), text = box.querySelector('.announce__text');
+        select.addEventListener('change', function () {
+            var link = box.dataset.base + (select.value ? '?from=' + select.value : '');
+            url.value = link;
+            text.value = text.dataset.template.split('{URL}').join(link);
+        });
+        box.querySelectorAll('[data-copy-from]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var field = box.querySelector(btn.dataset.copyFrom), label = btn.textContent;
+                var done = function () { btn.textContent = 'コピーしました'; setTimeout(function () { btn.textContent = label; }, 1500); };
+                if (navigator.clipboard) { navigator.clipboard.writeText(field.value).then(done, function () { field.select(); document.execCommand('copy'); done(); }); }
+                else { field.select(); document.execCommand('copy'); done(); }
+            });
+        });
+    });
+    </script>
 
     <h2>メール</h2>
     <p class="text-muted">前日のリマインドと翌日のお礼は自動で送ります（サーバーの定期実行）。今すぐ送りたいときはこちら。すでに送った人には送りません。</p>

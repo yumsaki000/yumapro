@@ -11,7 +11,14 @@ use PDO;
  */
 final class Courses
 {
-    public const ACCESS = ['public' => '全員', 'crew' => 'クルー限定', 'paid' => '購入した人'];
+    public const ACCESS = ['public' => '全員に公開', 'crew' => 'クルー専用', 'paid' => '有料'];
+
+    /** 登録画面で「見られる人」の下に出す説明 */
+    public const ACCESS_HELP = [
+        'public' => '誰でも見られます（ログインも不要）。集客用の動画に',
+        'crew' => '加入中のクルーだけが見られます。ほかの人には「クルーになる」を案内します',
+        'paid' => '購入した人が見られます（事前振込・運営が入金を確認）。クルーは無料にもできます',
+    ];
     public const STATUSES = ['draft' => '下書き', 'published' => '公開'];
     public const FIELDS = ['title', 'description', 'access', 'price', 'crew_included', 'status', 'sort_order'];
     public const LESSON_FIELDS = ['title', 'body', 'youtube_id', 'is_preview', 'status', 'sort_order'];
@@ -20,7 +27,10 @@ final class Courses
             (SELECT COUNT(*) FROM lessons l WHERE l.course_id = k.id) AS lesson_count,
             (SELECT COUNT(*) FROM lessons l WHERE l.course_id = k.id AND l.status = \'published\') AS published_lesson_count,
             (SELECT COUNT(*) FROM course_purchases p WHERE p.course_id = k.id AND p.status = \'paid\') AS paid_count,
-            (SELECT COUNT(*) FROM course_purchases p WHERE p.course_id = k.id AND p.status = \'pending\') AS pending_count
+            (SELECT COUNT(*) FROM course_purchases p WHERE p.course_id = k.id AND p.status = \'pending\') AS pending_count,
+            (SELECT COUNT(*) FROM lessons l WHERE l.course_id = k.id AND l.status = \'published\' AND l.is_preview = 1) AS preview_count,
+            (SELECT l.youtube_id FROM lessons l WHERE l.course_id = k.id AND l.status = \'published\' AND l.youtube_id IS NOT NULL
+                ORDER BY l.sort_order, l.id LIMIT 1) AS first_youtube_id
         FROM courses k';
 
     public static function all(): array
@@ -117,6 +127,37 @@ final class Courses
     public static function deleteLesson(int $id): void
     {
         Database::pdo()->prepare('DELETE FROM lessons WHERE id = ?')->execute([$id]);
+    }
+
+    /**
+     * 回の順番を1つ上（up）か下（down）へ動かす。並び順を 10, 20, 30… に振り直してから入れ替える
+     */
+    public static function moveLesson(int $id, string $direction): void
+    {
+        $lesson = self::findLesson($id);
+        if ($lesson === null || !in_array($direction, ['up', 'down'], true)) {
+            return;
+        }
+        $pdo = Database::pdo();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('SELECT id FROM lessons WHERE course_id = ? ORDER BY sort_order, id FOR UPDATE');
+            $stmt->execute([(int) $lesson['course_id']]);
+            $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+            $pos = array_search($id, $ids, true);
+            $swap = $direction === 'up' ? $pos - 1 : $pos + 1;
+            if ($pos !== false && isset($ids[$swap])) {
+                [$ids[$pos], $ids[$swap]] = [$ids[$swap], $ids[$pos]];
+            }
+            $update = $pdo->prepare('UPDATE lessons SET sort_order = ? WHERE id = ?');
+            foreach ($ids as $i => $lessonId) {
+                $update->execute([($i + 1) * 10, $lessonId]);
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
     }
 
     // ── 見られるかの判定 ─────────────────────────────────
@@ -228,15 +269,16 @@ final class Courses
         return null;
     }
 
-    /** 本文のURLをリンクにし、改行を残して表示する */
+    /** 本文（動画の下の説明）を表示用の HTML にする。■見出し・「・」箇条書き・**太字**・URL のリンクが使える */
     public static function formatBody(?string $body): string
     {
-        if ($body === null || $body === '') {
-            return '';
-        }
-        $escaped = e($body);
-        $linked = (string) preg_replace('#(https?://[^\s<]+)#u', '<a href="$1" target="_blank" rel="noopener">$1</a>', $escaped);
-        return nl2br($linked);
+        return Markup::render($body);
+    }
+
+    /** YouTube のサムネイル画像（一覧のカード・登録画面の確認用） */
+    public static function thumbnailUrl(?string $youtubeId): ?string
+    {
+        return $youtubeId === null || $youtubeId === '' ? null : 'https://i.ytimg.com/vi/' . rawurlencode($youtubeId) . '/hqdefault.jpg';
     }
 
     private static function newSlug(PDO $pdo): string

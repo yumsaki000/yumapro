@@ -19,6 +19,19 @@ use App\View;
  */
 final class EventsController
 {
+    /** 掲載する内容の欄：項目 => [最大の文字数（null は制限なし）, 名前] */
+    private const TEXT_FIELDS = [
+        'summary' => [300, '一言紹介'],
+        'highlights' => [1000, '安心ポイント'],
+        'recommend' => [1000, 'こんな方におすすめ'],
+        'timetable' => [1000, 'タイムスケジュール'],
+        'belongings' => [300, '持ち物・服装'],
+        'access' => [200, 'アクセス'],
+        'map_query' => [200, '地図に出す場所'],
+        'faq' => [5000, 'よくある質問'],
+        'description' => [20000, '内容'],
+    ];
+
     public static function index(): void
     {
         $admin = Auth::requireAdmin();
@@ -54,8 +67,8 @@ final class EventsController
                 if ($upload['name'] !== null) {
                     Events::setPhoto($id, $upload['name']);
                 }
-                Session::flash('notice', "「{$values['title']}」を作りました。");
-                redirect('/admin/events/' . $id);
+                $photoErrors = self::savePhotos($id, []);
+                self::afterSave($id, "「{$values['title']}」を作りました。", $photoErrors);
                 return;
             }
         }
@@ -69,6 +82,8 @@ final class EventsController
             'values' => $values,
             'errors' => $errors,
             'event' => null,
+            'photos' => [],
+            'latest' => is_post() ? [] : Events::latestPerType(),
         ], 'admin/layout');
     }
 
@@ -102,16 +117,17 @@ final class EventsController
                 $errors[] = $upload['error'];
             }
             if ($errors === []) {
-                Events::update((int) $event['id'], $values);
+                $id = (int) $event['id'];
+                Events::update($id, $values);
                 if ($upload['name'] !== null) {
                     Photos::delete($event['photo']);
-                    Events::setPhoto((int) $event['id'], $upload['name']);
+                    Events::setPhoto($id, $upload['name']);
                 } elseif (Form::checked($_POST, 'remove_photo')) {
                     Photos::delete($event['photo']);
-                    Events::setPhoto((int) $event['id'], null);
+                    Events::setPhoto($id, null);
                 }
-                Session::flash('notice', "「{$values['title']}」を保存しました。");
-                redirect('/admin/events/' . $event['id']);
+                $photoErrors = self::savePhotos($id, Events::photos($id));
+                self::afterSave($id, "「{$values['title']}」を保存しました。", $photoErrors);
                 return;
             }
         }
@@ -125,7 +141,19 @@ final class EventsController
             'values' => $values,
             'errors' => $errors,
             'event' => $event,
+            'photos' => Events::photos((int) $event['id']),
+            'latest' => [],
         ], 'admin/layout');
+    }
+
+    /**
+     * 掲示板に出る形で回のページを見る（下書きでも見られる。申込はできない）
+     */
+    public static function preview(string $id): void
+    {
+        Auth::requireAdmin();
+        $event = Events::find((int) $id) ?? abort_not_found();
+        \App\Web\BoardController::render($event, true);
     }
 
     public static function copy(string $id): void
@@ -149,6 +177,41 @@ final class EventsController
             Session::flash('notice', '「' . Events::STATUSES[$status] . '」にしました。');
         }
         redirect('/admin/events/' . $event['id']);
+    }
+
+    /**
+     * 並べる写真の追加・削除・表紙の入れ替え。うまくいかなかった写真の理由を返す。
+     *
+     * @param list<array{id: int|string, name: string}> $current 今ある写真
+     * @return list<string>
+     */
+    private static function savePhotos(int $eventId, array $current): array
+    {
+        $ids = array_map(fn ($p) => (int) $p['id'], $current);
+        $remove = array_map('intval', array_filter((array) ($_POST['remove_photos'] ?? []), 'is_numeric'));
+        foreach (array_intersect($ids, $remove) as $photoId) {
+            Events::removePhoto($eventId, $photoId);
+        }
+        $cover = Form::int($_POST, 'cover_photo');
+        if (is_int($cover) && in_array($cover, $ids, true) && !in_array($cover, $remove, true)) {
+            Events::makeCover($eventId, $cover);
+        }
+        $room = Events::MAX_GALLERY - count(Events::photos($eventId));
+        $result = Photos::storeMany($_FILES['photos'] ?? [], max(0, $room));
+        foreach ($result['names'] as $name) {
+            Events::addPhoto($eventId, $name);
+        }
+        return $result['errors'];
+    }
+
+    /** 保存のあと：「保存してページを確認」ならプレビューへ、それ以外は回の画面へ */
+    private static function afterSave(int $id, string $notice, array $photoErrors): void
+    {
+        Session::flash('notice', $notice);
+        if ($photoErrors !== []) {
+            Session::flash('error', implode("\n", $photoErrors));
+        }
+        redirect(Form::str($_POST, 'after') === 'preview' ? "/admin/events/{$id}/preview" : "/admin/events/{$id}");
     }
 
     private static function defaults(array $types): array
@@ -175,8 +238,16 @@ final class EventsController
             'cancel_deadline' => null,
             'cancel_policy' => null,
             'organizer_amount' => 0,
-            'description' => null,
             'status' => 'draft',
+            'summary' => null,
+            'highlights' => null,
+            'recommend' => null,
+            'timetable' => null,
+            'belongings' => null,
+            'access' => null,
+            'map_query' => null,
+            'faq' => null,
+            'description' => null,
         ];
     }
 
@@ -203,8 +274,15 @@ final class EventsController
             'venue_address' => Form::str($input, 'venue_address') ?: null,
             'venue_url' => Form::str($input, 'venue_url') ?: null,
             'cancel_policy' => Form::str($input, 'cancel_policy') ?: null,
-            'description' => Form::str($input, 'description') ?: null,
         ];
+        // 掲載する内容。どれも空欄なら出さない
+        foreach (self::TEXT_FIELDS as $field => [$max, $label]) {
+            $value = Form::str($input, $field);
+            if ($max !== null && mb_strlen($value) > $max) {
+                $errors[] = "{$label}は{$max}文字までにしてください（いま" . mb_strlen($value) . '文字）。';
+            }
+            $values[$field] = $value === '' ? null : $value;
+        }
         if ($values['title'] === '' || mb_strlen($values['title']) > 200) {
             $errors[] = 'タイトルは1〜200文字で入れてください。';
         }

@@ -58,6 +58,14 @@ function is_post(): bool
 }
 
 /**
+ * このアプリの絶対URL（メール・SNSの共有・カレンダーに入れるリンク用）。APP_URL から作る
+ */
+function app_url(string $path = ''): string
+{
+    return rtrim((string) App\Config::get('APP_URL', ''), '/') . $path;
+}
+
+/**
  * 今のURLのパス部分（/admin/events など）
  */
 function current_path(): string

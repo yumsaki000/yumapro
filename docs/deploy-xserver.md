@@ -67,6 +67,9 @@ Web から見えるのは `public/` だけにする。`.env`（パスワード�
 
 - `APP_DEBUG=false` にする（エラー内容を画面に出さない）
 - `APP_URL` を `https://` で始める（ログインのCookieが https でしか送られなくなる）。メールに入る個人専用URLもこの値から作るので、正しいドメインにする
+- `APP_ENV=production` にすると、イベント一覧と募集中の回のページが検索エンジンに載る（それ以外の画面は載せない）。`APP_URL` は `https://event.minatocrew.com` にする（共有のリンク・カレンダー・埋め込みに使う）
+- 写真のアップロード：サーバーパネルの「php.ini 設定」で `upload_max_filesize` を 20M、`post_max_size` を 80M 以上にしておく（写真をまとめて選んだときに送れるように）。`storage/photos/` に書き込めるようにする
+- 公式サイトへの埋め込みとリンクの差し替えは [official-site-integration.md](official-site-integration.md)
 - `MAIL_DRIVER=mail` にする（`log` のままだとメールが送られず `storage/mail/` にファイルとして残る）
 - ログイン失敗の制限はIPごとにもかけている。公開後、`REMOTE_ADDR` が利用者のIPになっているか確かめる（全員が同じIPに見えると、1人の失敗で全員が止まる）
 - `.env` は Git に入れない。パスワードは個人ごとの管理にする

@@ -94,8 +94,16 @@ CREATE TABLE events (
     cancel_deadline     DATETIME     NULL COMMENT 'キャンセル期限（自動計算して保存）',
     cancel_policy       TEXT         NULL COMMENT 'キャンセル規定',
     organizer_amount    INT          NOT NULL DEFAULT 0 COMMENT '主催分（円）。収支 = 集金 - 経費 - 主催分',
-    description         TEXT         NULL COMMENT '公開ページの説明文',
-    photo               VARCHAR(64)  NULL COMMENT '写真のファイル名（storage/photos に保存。/photos/{名前} で表示）',
+    summary             VARCHAR(300) NULL COMMENT '一言紹介（カード・回のページの上・SNSで共有したときの説明）',
+    highlights          TEXT         NULL COMMENT '安心ポイント・特徴（1行に1つ。例：初参加歓迎）',
+    recommend           TEXT         NULL COMMENT 'こんな方におすすめ（1行に1つ）',
+    timetable           TEXT         NULL COMMENT 'タイムスケジュール（1行に1つ。例：14:00 自己紹介）',
+    belongings          VARCHAR(300) NULL COMMENT '持ち物・服装',
+    access              VARCHAR(200) NULL COMMENT '公開する場所の目安（例：駒込駅 徒歩3分）。住所は申込者にだけ見せる',
+    map_query           VARCHAR(200) NULL COMMENT '回のページの地図に出す場所（駅名など）。空欄なら地図を出さない',
+    faq                 TEXT         NULL COMMENT 'この回のよくある質問（Q./A.）。空欄なら設定の共通のものを出す',
+    description         TEXT         NULL COMMENT '公開ページの本文（■見出し・・箇条書き・**太字** が使える）',
+    photo               VARCHAR(64)  NULL COMMENT '表紙の写真のファイル名（storage/photos に保存。/photos/{名前} で表示）',
     extra               JSON         NULL COMMENT '形式ごとの追加設定',
     status              ENUM('draft', 'open', 'closed', 'done', 'cancelled') NOT NULL DEFAULT 'draft'
                         COMMENT '下書き／募集中／締切／終了／中止',
@@ -109,6 +117,18 @@ CREATE TABLE events (
     CONSTRAINT fk_events_type FOREIGN KEY (event_type_id) REFERENCES event_types (id),
     CONSTRAINT fk_events_copied_from FOREIGN KEY (copied_from_id) REFERENCES events (id) ON DELETE SET NULL,
     CONSTRAINT fk_events_created_by FOREIGN KEY (created_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 回の写真（表紙のほかに載せる写真。回のページに並べる）
+CREATE TABLE event_photos (
+    id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    event_id    INT UNSIGNED NOT NULL,
+    name        VARCHAR(64)  NOT NULL COMMENT 'storage/photos のファイル名',
+    sort_order  INT          NOT NULL DEFAULT 0,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_event_photos_event (event_id, sort_order),
+    CONSTRAINT fk_event_photos_event FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 顧客（1人1件。掲示板の申込・手入力・今のスプレッドシートからの移行を名寄せしてまとめる）

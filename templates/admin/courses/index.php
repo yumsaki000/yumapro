@@ -10,7 +10,7 @@
             <a class="button button--primary" href="/admin/courses/new">新しい講座</a>
         </span>
     </div>
-    <p class="text-muted">講座は「公開」にすると参加者向けの「講座・動画」に出ます。見られる範囲は講座ごとに「全員／クルー限定／購入した人」から選び、各回に「お試し」の印を付けると誰でも見られます。動画はYouTubeに「限定公開」で上げて、URLを回に貼ります。</p>
+    <p class="text-muted">講座は「公開」にすると参加者向けの「講座・動画」に出ます。見られる人は講座ごとに「全員に公開／クルー専用／有料」から選び、各回を「お試し（無料公開）」にするとその回だけ誰でも見られます。動画はYouTubeに「限定公開」で上げて、URLを回に貼り、動画の下に出す説明を書きます。</p>
     <?php if ($courses === []): ?><p>講座はまだありません。</p><?php endif; ?>
     <ul class="list">
         <?php foreach ($courses as $c): ?>

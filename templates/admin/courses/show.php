@@ -3,6 +3,8 @@
 /** @var array $lessons */
 /** @var array $purchases */
 /** @var string $baseUrl */
+/** @var array|null $addValues 回の追加で誤りがあったときの入力 */
+/** @var list<string> $addErrors */
 $id = (int) $course['id'];
 ?>
 <section class="card">
@@ -13,7 +15,8 @@ $id = (int) $course['id'];
             <span class="badge"><?= e(App\Courses::ACCESS[$course['access']]) ?><?= $course['access'] === 'paid' && $course['price'] !== null ? ' ' . e(yen($course['price'])) : '' ?></span>
         </span>
     </div>
-    <?php if ($course['description'] !== null): ?><pre class="plain text-muted"><?= e($course['description']) ?></pre><?php endif; ?>
+    <p class="access-note"><?= e(App\Courses::ACCESS_HELP[$course['access']] ?? '') ?><?php if ($course['access'] === 'paid'): ?>（<?= e(yen($course['price'])) ?><?= (int) $course['crew_included'] === 1 ? '・クルーは無料' : '' ?>）<?php endif; ?>。お試しの回：<?= (int) $course['preview_count'] ?>回</p>
+    <?php if ($course['description'] !== null): ?><div class="rich text-muted"><?= App\Courses::formatBody($course['description']) ?></div><?php endif; ?>
     <p class="text-muted">公開ページ：<code><?= e($baseUrl) ?>/learn/<?= e($course['slug']) ?></code></p>
     <div class="actions">
         <a class="button" href="/admin/courses/<?= $id ?>/edit">編集</a>
@@ -22,39 +25,50 @@ $id = (int) $course['id'];
     </div>
 </section>
 
-<section class="card">
+<section class="card" id="lessons">
     <h2>各回（<?= count($lessons) ?>）</h2>
-    <?php if ($lessons === []): ?><p class="text-muted">まだ回がありません。下から追加してください。</p><?php else: ?>
-        <ul class="list">
+    <?php if ($lessons === []): ?><p class="text-muted">まだ回がありません。下の「回を追加」から、YouTube の URL と説明を入れて追加してください。</p><?php else: ?>
+        <p class="text-muted small">↑↓で順番を入れ替えられます。「お試し」の回は誰でも見られます。</p>
+        <ul class="lesson-list">
             <?php foreach ($lessons as $i => $l): ?>
-                <li class="list__item">
-                    <div class="list__main">
-                        <span class="list__title"><?= $i + 1 ?>. <?= e($l['title']) ?></span>
-                        <?php if ((int) $l['is_preview'] === 1): ?><span class="badge badge--ok">お試し</span><?php endif; ?>
-                        <?php if ($l['status'] !== 'published'): ?><span class="badge">下書き</span><?php endif; ?>
-                        <?php if ($l['youtube_id'] !== null): ?><span class="badge">動画</span><?php endif; ?>
-                        <div class="list__sub">並び順 <?= (int) $l['sort_order'] ?><?= $l['body'] !== null ? '・' . e(mb_strimwidth($l['body'], 0, 60, '…')) : '' ?></div>
-                    </div>
-                    <a class="button button--small" href="/admin/lessons/<?= (int) $l['id'] ?>/edit">編集</a>
-                    <form class="inline-form" method="post" action="/admin/lessons/<?= (int) $l['id'] ?>/delete" onsubmit="return confirm('この回を消します。よろしいですか？');"><?= csrf_field() ?><button type="submit" class="button button--small button--danger">消す</button></form>
+                <li class="lesson-list__item<?= $l['status'] !== 'published' ? ' is-draft' : '' ?>">
+                    <?php $thumb = App\Courses::thumbnailUrl($l['youtube_id']); ?>
+                    <span class="lesson-list__thumb"><?php if ($thumb !== null): ?><img src="<?= e($thumb) ?>" alt="" loading="lazy"><?php else: ?><span>文章</span><?php endif; ?></span>
+                    <span class="lesson-list__main">
+                        <span class="lesson-list__title"><?= $i + 1 ?>. <?= e($l['title']) ?></span>
+                        <span>
+                            <?php if ((int) $l['is_preview'] === 1): ?><span class="badge badge--ok">お試し（無料公開）</span><?php else: ?><span class="badge"><?= e(App\Courses::ACCESS[$course['access']]) ?></span><?php endif; ?>
+                            <?php if ($l['status'] !== 'published'): ?><span class="badge badge--warn">下書き</span><?php endif; ?>
+                        </span>
+                        <?php if ($l['body'] !== null): ?><span class="list__sub"><?= e(App\Markup::plain($l['body'], 60)) ?></span><?php endif; ?>
+                    </span>
+                    <span class="lesson-list__actions">
+                        <form class="inline-form" method="post" action="/admin/lessons/<?= (int) $l['id'] ?>/move"><?= csrf_field() ?><input type="hidden" name="direction" value="up"><button type="submit" class="button button--small" aria-label="上へ"<?= $i === 0 ? ' disabled' : '' ?>>↑</button></form>
+                        <form class="inline-form" method="post" action="/admin/lessons/<?= (int) $l['id'] ?>/move"><?= csrf_field() ?><input type="hidden" name="direction" value="down"><button type="submit" class="button button--small" aria-label="下へ"<?= $i === count($lessons) - 1 ? ' disabled' : '' ?>>↓</button></form>
+                        <a class="button button--small" href="/admin/lessons/<?= (int) $l['id'] ?>/edit">編集</a>
+                        <form class="inline-form" method="post" action="/admin/lessons/<?= (int) $l['id'] ?>/delete" onsubmit="return confirm('この回を消します。よろしいですか？');"><?= csrf_field() ?><button type="submit" class="button button--small button--danger">消す</button></form>
+                    </span>
                 </li>
             <?php endforeach; ?>
         </ul>
     <?php endif; ?>
+</section>
 
+<section class="card" id="add-lesson">
     <h2>回を追加</h2>
+    <?php if (($addErrors ?? []) !== []): ?>
+        <div class="alert alert--error" role="alert"><ul><?php foreach ($addErrors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
+    <?php endif; ?>
     <form method="post" action="/admin/courses/<?= $id ?>/lessons" class="form">
         <?= csrf_field() ?>
-        <label class="form__field"><span class="form__label">回のタイトル</span><input type="text" name="title" maxlength="200" required></label>
-        <label class="form__field"><span class="form__label">YouTubeの動画URL（任意）</span><input type="url" name="youtube" placeholder="https://youtu.be/xxxxxxxxxxx" inputmode="url"><span class="form__help">YouTube側で「限定公開」にした動画のURLを貼ります</span></label>
-        <label class="form__field"><span class="form__label">本文（任意）</span><textarea name="body" rows="5"></textarea><span class="form__help">改行はそのまま出ます。URLはリンクになります</span></label>
-        <div class="form__row">
-            <label class="form__check"><input type="checkbox" name="is_preview" value="1"> <span>お試し（誰でも見られる）</span></label>
-            <label class="form__field"><span class="form__label">状態</span><select name="status"><option value="published">公開</option><option value="draft">下書き</option></select></label>
+        <?= App\View::render('admin/courses/_lesson_fields', ['course' => $course, 'values' => $addValues ?? ['is_preview' => $lessons === [] ? 1 : 0, 'status' => 'published'], 'prefix' => 'new'], null) ?>
+        <div class="actions">
+            <button type="submit" class="button button--primary">この回を追加する</button>
+            <?php if ($lessons === []): ?><span class="text-muted small">最初の回は「お試し」にしておくと、講座の入口になります</span><?php endif; ?>
         </div>
-        <button type="submit" class="button button--primary">追加する</button>
     </form>
 </section>
+<script src="/assets/admin-editor.js"></script>
 
 <?php if ($course['access'] === 'paid'): ?>
     <section class="card">

@@ -48,6 +48,59 @@ final class Photos
     }
 
     /**
+     * 複数選んだ写真（<input type="file" name="photos[]" multiple>）を保存する。
+     * 保存できたものの名前と、できなかったものの理由を返す。$max 枚を超えた分は保存しない。
+     *
+     * @param array $files $_FILES['photos']
+     * @return array{names: list<string>, errors: list<string>}
+     */
+    public static function storeMany(array $files, int $max): array
+    {
+        $names = [];
+        $errors = [];
+        $count = is_array($files['name'] ?? null) ? count($files['name']) : 0;
+        for ($i = 0; $i < $count; $i++) {
+            $file = [];
+            foreach (['name', 'type', 'tmp_name', 'error', 'size'] as $key) {
+                $file[$key] = $files[$key][$i] ?? null;
+            }
+            if ((int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            if (count($names) >= $max) {
+                $errors[] = "写真は{$max}枚までです。多い分は保存していません。";
+                break;
+            }
+            $result = self::store($file);
+            if ($result['name'] !== null) {
+                $names[] = $result['name'];
+            } elseif ($result['error'] !== null) {
+                $label = is_string($file['name']) ? $file['name'] : '';
+                $errors[] = ($label !== '' ? "「{$label}」：" : '') . $result['error'];
+            }
+        }
+        return ['names' => $names, 'errors' => $errors];
+    }
+
+    /** 写真のファイルを複製して、新しい名前を返す（回の複製用）。元がなければ null */
+    public static function duplicate(string $name): ?string
+    {
+        $source = self::path($name);
+        if ($source === null || !is_file($source)) {
+            return null;
+        }
+        $copy = bin2hex(random_bytes(12)) . '.' . pathinfo($source, PATHINFO_EXTENSION);
+        return copy($source, self::dir() . '/' . $copy) ? $copy : null;
+    }
+
+    /** 公開ページ・SNSの共有で使う、写真の絶対URL */
+    public static function absoluteUrl(?string $name): ?string
+    {
+        $url = self::url($name);
+        return $url === null ? null : rtrim((string) Config::get('APP_URL', ''), '/') . $url;
+    }
+
+    /**
      * 画像ファイルを縮めて保存し、ファイル名を返す。画像でなければ例外。
      */
     public static function saveImage(string $sourcePath): string

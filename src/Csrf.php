@@ -30,6 +30,30 @@ final class Csrf
     }
 
     /**
+     * 送った量がサーバーの上限（post_max_size）を超えると、PHP は中身を全部捨てる（トークンも消える）。
+     * そのときは「写真が大きすぎる」と分かるように案内する
+     */
+    public static function postTooLarge(): bool
+    {
+        $length = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+        $limit = self::bytes((string) ini_get('post_max_size'));
+        return $_POST === [] && $limit > 0 && $length > $limit;
+    }
+
+    /** "8M" のような php.ini の値をバイト数にする */
+    public static function bytes(string $value): int
+    {
+        $value = trim($value);
+        $number = (int) $value;
+        return match (strtoupper(substr($value, -1))) {
+            'G' => $number * 1024 ** 3,
+            'M' => $number * 1024 ** 2,
+            'K' => $number * 1024,
+            default => $number,
+        };
+    }
+
+    /**
      * ログイン・ログアウト時にトークンを取り替える
      */
     public static function rotate(): void
@@ -49,7 +73,7 @@ final class Csrf
             return true;
         }
         http_response_code(403);
-        echo View::render('errors/csrf', ['title' => '送信できませんでした']);
+        echo View::render('errors/csrf', ['title' => '送信できませんでした', 'tooLarge' => self::postTooLarge()]);
         return false;
     }
 }

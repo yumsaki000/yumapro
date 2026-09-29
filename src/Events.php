@@ -27,6 +27,15 @@ final class Events
         'cancelled' => 'badge badge--danger',
     ];
 
+    /** 登録画面で状態の下に出す説明 */
+    public const STATUS_HELP = [
+        'draft' => '掲示板に出ません。準備中はこれ',
+        'open' => '掲示板に出て、申込を受け付けます',
+        'closed' => '掲示板に出ますが、申込は受け付けません',
+        'done' => '開催が終わった回',
+        'cancelled' => '中止。掲示板に出ません',
+    ];
+
     public const PAYMENT_TIMINGS = ['prepaid' => '前払い（事前振込）', 'onsite' => '当日払い'];
 
     /** フォームで受け取る項目（この順で保存する） */
@@ -36,7 +45,17 @@ final class Events
         'capacity', 'capacity_male', 'capacity_female',
         'fee', 'fee_male', 'fee_female', 'fee_crew', 'payment_timing',
         'apply_deadline', 'cancel_deadline', 'cancel_policy',
-        'organizer_amount', 'description', 'status',
+        'organizer_amount', 'status',
+        // 掲載する内容（回のページ）
+        'summary', 'highlights', 'recommend', 'timetable', 'belongings', 'access', 'map_query', 'faq', 'description',
+    ];
+
+    /** 回のページに載せられる写真の数（表紙のほか） */
+    public const MAX_GALLERY = 8;
+
+    /** 安心ポイントの候補（入力画面でタップすると足せる） */
+    public const HIGHLIGHT_SUGGESTIONS = [
+        '初参加歓迎', 'おひとり参加歓迎', '女性主催', '少人数', '強引な勧誘は一切なし', '手ぶらでOK', 'お菓子つき', 'ドリンクつき', '途中参加OK', '学生歓迎',
     ];
 
     /** 掲示板の色分け（形式ごと）。公式サイトのアクセントの色 */
@@ -75,11 +94,48 @@ final class Events
         return $stmt->fetch() ?: null;
     }
 
-    /** 掲示板に出す回（募集中と締切。今日以降、近い順） */
-    public static function publicList(): array
+    /** 掲示板に出す回（募集中と締切。今日以降、近い順）。形式のコードで絞れる */
+    public static function publicList(?string $typeCode = null, int $limit = 0): array
+    {
+        $sql = self::SELECT . " WHERE e.status IN ('open', 'closed') AND e.starts_at >= CURDATE()";
+        $params = [];
+        if ($typeCode !== null) {
+            $sql .= ' AND t.code = ?';
+            $params[] = $typeCode;
+        }
+        $sql .= ' ORDER BY e.starts_at' . ($limit > 0 ? ' LIMIT ' . $limit : '');
+        $stmt = Database::pdo()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    /** 掲示板に回がある形式（絞り込みのボタン用）：code => name */
+    public static function publicTypes(): array
     {
         return Database::pdo()->query(
-            self::SELECT . " WHERE e.status IN ('open', 'closed') AND e.starts_at >= CURDATE() ORDER BY e.starts_at"
+            "SELECT t.code, t.name FROM events e JOIN event_types t ON t.id = e.event_type_id
+             WHERE e.status IN ('open', 'closed') AND e.starts_at >= CURDATE()
+             GROUP BY t.id, t.code, t.name, t.sort_order ORDER BY t.sort_order, t.id"
+        )->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+
+    /** 「ほかのイベント」：この回以外の募集中の回（同じ形式を先に） */
+    public static function others(array $event, int $limit): array
+    {
+        $stmt = Database::pdo()->prepare(
+            self::SELECT . " WHERE e.status = 'open' AND e.starts_at >= CURDATE() AND e.id <> ?
+             ORDER BY (e.event_type_id = ?) DESC, e.starts_at LIMIT " . (int) $limit
+        );
+        $stmt->execute([(int) $event['id'], (int) $event['event_type_id']]);
+        return $stmt->fetchAll();
+    }
+
+    /** 形式ごとの一番新しい回（「前の回をもとに作る」用） */
+    public static function latestPerType(): array
+    {
+        return Database::pdo()->query(
+            self::SELECT . ' WHERE e.id IN (SELECT MAX(x.id) FROM events x WHERE x.status <> \'cancelled\' GROUP BY x.event_type_id)
+             ORDER BY t.sort_order, t.id'
         )->fetchAll();
     }
 
@@ -137,7 +193,7 @@ final class Events
         Database::pdo()->prepare("UPDATE events SET {$sets} WHERE id = ?")->execute($values);
     }
 
-    /** 回を複製する（下書き・申込なし）。第n回は +1、日時はそのままなので、複製後に直す */
+    /** 回を複製する（下書き・申込なし）。第n回は +1、日時はそのままなので、複製後に直す。写真も複製する */
     public static function copy(int $id, int $adminId): int
     {
         $source = self::find($id);
@@ -155,7 +211,19 @@ final class Events
         $values[] = $adminId;
         $values[] = $id;
         $pdo->prepare($sql)->execute($values);
-        return (int) $pdo->lastInsertId();
+        $newId = (int) $pdo->lastInsertId();
+
+        // 写真はファイルごと複製する（片方で消しても、もう片方に残るように）
+        if ($source['photo'] !== null) {
+            self::setPhoto($newId, Photos::duplicate($source['photo']));
+        }
+        foreach (self::photos($id) as $photo) {
+            $copied = Photos::duplicate($photo['name']);
+            if ($copied !== null) {
+                self::addPhoto($newId, $copied);
+            }
+        }
+        return $newId;
     }
 
     public static function setStatus(int $id, string $status): void
@@ -166,9 +234,66 @@ final class Events
         Database::pdo()->prepare('UPDATE events SET status = ? WHERE id = ?')->execute([$status, $id]);
     }
 
+    /** 表紙の写真を差し替える（古いファイルは呼ぶ側で消す） */
     public static function setPhoto(int $id, ?string $photo): void
     {
         Database::pdo()->prepare('UPDATE events SET photo = ? WHERE id = ?')->execute([$photo, $id]);
+    }
+
+    /** 表紙のほかの写真（並び順） */
+    public static function photos(int $eventId): array
+    {
+        $stmt = Database::pdo()->prepare('SELECT id, name FROM event_photos WHERE event_id = ? ORDER BY sort_order, id');
+        $stmt->execute([$eventId]);
+        return $stmt->fetchAll();
+    }
+
+    public static function addPhoto(int $eventId, string $name): void
+    {
+        $pdo = Database::pdo();
+        $stmt = $pdo->prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 FROM event_photos WHERE event_id = ?');
+        $stmt->execute([$eventId]);
+        $pdo->prepare('INSERT INTO event_photos (event_id, name, sort_order) VALUES (?, ?, ?)')
+            ->execute([$eventId, $name, (int) $stmt->fetchColumn()]);
+    }
+
+    /** 写真を消す（ファイルも）。この回の写真でなければ何もしない */
+    public static function removePhoto(int $eventId, int $photoId): void
+    {
+        $pdo = Database::pdo();
+        $stmt = $pdo->prepare('SELECT name FROM event_photos WHERE id = ? AND event_id = ?');
+        $stmt->execute([$photoId, $eventId]);
+        $name = $stmt->fetchColumn();
+        if ($name === false) {
+            return;
+        }
+        $pdo->prepare('DELETE FROM event_photos WHERE id = ?')->execute([$photoId]);
+        Photos::delete((string) $name);
+    }
+
+    /** 並べた写真の1枚を表紙にする（今の表紙は並びのほうへ回す） */
+    public static function makeCover(int $eventId, int $photoId): void
+    {
+        $pdo = Database::pdo();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare('SELECT e.photo, p.name, p.sort_order FROM events e JOIN event_photos p ON p.event_id = e.id
+                                   WHERE e.id = ? AND p.id = ? FOR UPDATE');
+            $stmt->execute([$eventId, $photoId]);
+            $row = $stmt->fetch();
+            if ($row !== false) {
+                $pdo->prepare('UPDATE events SET photo = ? WHERE id = ?')->execute([$row['name'], $eventId]);
+                if ($row['photo'] !== null) {
+                    $pdo->prepare('UPDATE event_photos SET name = ? WHERE id = ?')->execute([$row['photo'], $photoId]);
+                } else {
+                    $pdo->prepare('DELETE FROM event_photos WHERE id = ?')->execute([$photoId]);
+                }
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
     }
 
     /** 形式の色のクラス名（tag-type--pink など）。知らない値は navy */

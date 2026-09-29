@@ -31,6 +31,7 @@ final class LearnController
             'intro' => Settings::get('learn_intro'),
             'courses' => $courses,
             'customer' => $customer,
+            'wide' => true,
         ]);
     }
 
