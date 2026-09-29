@@ -96,21 +96,30 @@ final class CustomerListImport
     public static function parseResponses(array $rows): array
     {
         $header = array_map('trim', $rows[0] ?? []);
-        $find = function (array $keywords) use ($header): ?int {
-            foreach ($header as $i => $label) {
-                foreach ($keywords as $keyword) {
-                    if ($label !== '' && str_contains($label, $keyword)) {
-                        return $i;
+        // 言葉の順に優先して探す（列の並びには頼らない）。$exclude を含む見出しは除く
+        $find = function (array $keywords, array $exclude = []) use ($header): ?int {
+            foreach ($keywords as $keyword) {
+                foreach ($header as $i => $label) {
+                    if ($label === '' || !str_contains($label, $keyword)) {
+                        continue;
                     }
+                    foreach ($exclude as $word) {
+                        if (str_contains($label, $word)) {
+                            continue 2;
+                        }
+                    }
+                    return $i;
                 }
             }
             return null;
         };
+        $kanaWords = ['フリガナ', 'カタカナ', 'ふりがな'];
         $col = [
-            'name' => $find(['漢字', '氏名', '名前']),
-            'kana' => $find(['フリガナ', 'カタカナ']),
+            // 「お名前（カタカナ）」を名前の列と取り違えない
+            'name' => $find(['漢字', '氏名', '名前'], $kanaWords),
+            'kana' => $find($kanaWords),
             'phone' => $find(['電話']),
-            'email' => $find(['メール']),
+            'email' => $find(['メールアドレス', 'メール']),
             'sns' => $find(['SNS']),
         ];
         if ($col['name'] === null) {
@@ -138,6 +147,7 @@ final class CustomerListImport
 
     /**
      * 同じ名前の顧客に連絡先を付ける。同じ名前が複数いるときはフリガナで見分け、それでも決まらなければ付けない。
+     * （フリガナがどの人とも合わない場合も「決まらない」扱い。声掛けリストにいない人とは分けて数える）
      *
      * @param list<array<string, mixed>> $records
      * @param array<string, array> $people parseResponses() の結果
@@ -155,17 +165,17 @@ final class CustomerListImport
         $unmatched = [];
         foreach ($people as $key => $person) {
             $candidates = $byName[$key] ?? [];
+            if ($candidates === []) {
+                $unmatched[] = $person['name'];
+                continue;
+            }
             if (count($candidates) > 1 && $person['kana'] !== '') {
                 $candidates = array_values(array_filter(
                     $candidates,
                     fn ($i) => Normalize::matchKey($records[$i]['name_kana'] ?? '') === Normalize::matchKey($person['kana'])
                 ));
             }
-            if ($candidates === []) {
-                $unmatched[] = $person['name'];
-                continue;
-            }
-            if (count($candidates) > 1) {
+            if (count($candidates) !== 1) {
                 $ambiguous[] = $person['name'];
                 continue;
             }
@@ -226,12 +236,17 @@ final class CustomerListImport
         $pdo->beginTransaction();
         try {
             foreach ($records as $r) {
-                $stmt->execute([
-                    $r['legacy_no'], $r['name'], $r['name_kana'], $r['gender'], $r['first_channel'], $r['note'],
-                    $r['phone'], $r['email'], $r['sns_account'],
-                    json_encode($r['legacy_data'], JSON_UNESCAPED_UNICODE),
-                    bin2hex(random_bytes(16)),
-                ]);
+                try {
+                    $stmt->execute([
+                        $r['legacy_no'], $r['name'], $r['name_kana'], $r['gender'], $r['first_channel'], $r['note'],
+                        $r['phone'], $r['email'], $r['sns_account'],
+                        json_encode($r['legacy_data'], JSON_UNESCAPED_UNICODE),
+                        bin2hex(random_bytes(16)),
+                    ]);
+                } catch (\PDOException $e) {
+                    // どの人で失敗したか分かるようにする（列の長さ超えなど）
+                    throw new RuntimeException("番号{$r['legacy_no']}（{$r['name']}）を書き込めませんでした: " . $e->getMessage(), 0, $e);
+                }
                 // MariaDB: 1 = 追加、2 = 更新、0 = 変更なし
                 $counts[match ($stmt->rowCount()) { 1 => 'inserted', 2 => 'updated', default => 'unchanged' }]++;
             }

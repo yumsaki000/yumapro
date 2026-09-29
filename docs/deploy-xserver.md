@@ -30,7 +30,7 @@ Web から見えるのは `public/` だけにする。`.env`（パスワード�
 2. **サブドメイン**：`event.minatocrew.com` を追加し、無料SSLを有効にする
    - DNSはすでにこのサーバーを向いている（2026-09-28 確認）。つながらない場合だけドメイン管理者に確認する
 3. **DB**：サーバーパネル「MySQL設定」で DB とユーザーを作る。phpMyAdmin で `database/init/` の SQL を番号順に流す
-4. **コードを置く**：SSH（または SFTP）で `minato-event/` に一式を置く
+4. **コードを置く**：SSH（または SFTP）で `minato-event/` に一式を置く。`storage/` はPHPから書き込めるようにしておく（ログイン状態を `storage/sessions/` に保存する。作れない場合はサーバー既定の場所を使う）
 5. **公開フォルダをつなぐ**（SSH）：
 
    ```sh

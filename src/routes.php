@@ -46,8 +46,8 @@ $router->get('/admin/login', function (): void {
 });
 
 $router->post('/admin/login', function (): void {
-    $loginId = trim((string) ($_POST['login_id'] ?? ''));
-    $password = (string) ($_POST['password'] ?? '');
+    $loginId = is_string($_POST['login_id'] ?? null) ? trim($_POST['login_id']) : '';
+    $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
     $next = safe_admin_path($_POST['next'] ?? null);
 
     $result = ($loginId === '' || $password === '') ? Auth::INVALID : Auth::attempt($loginId, $password, client_ip());

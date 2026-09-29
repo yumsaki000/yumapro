@@ -63,7 +63,7 @@ if ($options['responses'] !== null) {
     $out('■ フォームの回答');
     $out('  回答した人: ' . count($people) . '人');
     $out("  連絡先を付けた人: {$result['matched']}人（電話 {$count('phone')}／メール {$count('email')}／SNS {$count('sns_account')}）");
-    $out('  同じ名前の顧客が複数いて付けなかった人: ' . count($result['ambiguous']) . '人');
+    $out('  同じ名前の顧客が複数いて、どの人か決められず付けなかった人: ' . count($result['ambiguous']) . '人');
     $list($result['ambiguous']);
     $out('  声掛けリストにいない人（移さない）: ' . count($result['unmatched']) . '人');
     $list($result['unmatched']);

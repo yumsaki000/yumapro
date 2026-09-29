@@ -56,3 +56,30 @@ test('CSV：Shift_JIS でも読める', function () {
     $rows = CsvReader::parse($sjis);
     assert_same('山田 花子', $rows[1][1]);
 });
+
+test('移行：フォームの回答の列は見出しの言葉で見つける（列の並びに頼らない）', function () {
+    $rows = CsvReader::parse(
+        "タイムスタンプ,お名前(フリガナ) ※本名,お名前(漢字) ※本名,メールアドレス(任意),電話番号\n"
+        . "2025/07/01 10:00:00,ヤマダ ハナコ,山田 花子,Hanako@Example.com,090-1111-2222\n"
+    );
+    $people = CustomerListImport::parseResponses($rows);
+    $person = $people[App\Normalize::matchKey('山田 花子')] ?? null;
+    assert_true($person !== null, 'フリガナの列が先にあっても、漢字の列を名前にする');
+    assert_same('ヤマダ ハナコ', $person['kana']);
+    assert_same('09011112222', $person['phone']);
+    assert_same('hanako@example.com', $person['email']);
+});
+
+test('移行：同じ名前が複数いて、フリガナがどの人とも合わないときは付けない', function () {
+    $list = CustomerListImport::parseList(CsvReader::parse(
+        "番号,名前,カタカナ\n1,鈴木 一郎,スズキイチロウ\n2,鈴木 一郎,スズキイチロウ\n"
+    ));
+    $people = CustomerListImport::parseResponses(CsvReader::parse(
+        "お名前(漢字),お名前(フリガナ),電話番号\n鈴木 一郎,ススキ イチロウ,090-5555-6666\n"
+    ));
+    $result = CustomerListImport::enrich($list['records'], $people);
+    assert_same(0, $result['matched']);
+    assert_same(['鈴木 一郎'], $result['ambiguous'], '「決められなかった人」に入れる');
+    assert_same([], $result['unmatched'], '「リストにいない人」には入れない');
+    assert_same(null, $list['records'][0]['phone']);
+});

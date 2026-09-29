@@ -17,6 +17,7 @@ if (PHP_SAPI !== 'cli') {
 
 require dirname(__DIR__) . '/src/bootstrap.php';
 
+use App\Auth;
 use App\Database;
 
 const MIN_PASSWORD_LENGTH = 10;
@@ -66,7 +67,7 @@ $reset = in_array('--reset', $argv, true);
 $pdo = Database::pdo();
 
 $loginId = ask('ログインID（半角英数字と . _ -、3〜64文字）: ');
-if (!preg_match('/\A[A-Za-z0-9._-]{3,64}\z/', $loginId)) {
+if (!Auth::isValidLoginId($loginId)) {
     fail('ログインIDは半角英数字と . _ - の3〜64文字にしてください。');
 }
 

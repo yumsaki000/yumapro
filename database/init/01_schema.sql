@@ -116,11 +116,11 @@ CREATE TABLE customers (
     KEY idx_customers_name_kana (name_kana)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 取り込み履歴（CSVアップロード1回につき1行）
+-- 取り込み履歴（今のスプレッドシートからの移行など、まとめて取り込んだ1回につき1行）
 CREATE TABLE import_batches (
     id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    source          VARCHAR(20)  NOT NULL COMMENT 'kokuchpro / google_form / peatix / customer_list',
-    event_id        INT UNSIGNED NULL COMMENT '取り込み先の回（顧客リストの取り込みでは NULL）',
+    source          VARCHAR(20)  NOT NULL COMMENT 'legacy_customers（声掛けリスト）/ legacy_responses（フォームの回答）など',
+    event_id        INT UNSIGNED NULL COMMENT '取り込み先の回（顧客の移行では NULL）',
     filename        VARCHAR(255) NULL,
     total_rows      INT UNSIGNED NOT NULL DEFAULT 0,
     created_rows    INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '新しく登録した件数',
@@ -140,14 +140,14 @@ CREATE TABLE registrations (
     event_id            INT UNSIGNED NOT NULL,
     customer_id         INT UNSIGNED NOT NULL,
     source              VARCHAR(20)  NOT NULL DEFAULT 'manual'
-                        COMMENT '申込元: kokuchpro / google_form / peatix / own_form / manual',
-    external_id         VARCHAR(100) NULL COMMENT '申込元での番号（同じCSVを再度取り込んでも重複させない）',
+                        COMMENT '申込元: own_form（掲示板の申込フォーム）/ manual（手入力）/ legacy（移行）',
+    external_id         VARCHAR(100) NULL COMMENT '申込元での番号（移行元の行など。同じものを再度取り込んでも重複させない）',
     status              ENUM('applied', 'waitlisted', 'cancelled') NOT NULL DEFAULT 'applied'
                         COMMENT '申込／キャンセル待ち／キャンセル',
     fee                 INT UNSIGNED NULL COMMENT 'この人の参加費（申込時点の金額）',
     answers             JSON         NULL COMMENT '追加項目の回答（event_types.form_fields に対応）',
-    raw_data            JSON         NULL COMMENT '取り込んだ元データそのまま（列の対応を後から直せるように）',
-    payment_method      VARCHAR(20)  NULL COMMENT 'cash / bank_transfer / paypay / peatix / other',
+    raw_data            JSON         NULL COMMENT '移行元の行そのまま（列の対応を後から直せるように）',
+    payment_method      VARCHAR(20)  NULL COMMENT 'cash / bank_transfer / paypay / other',
     prepaid_at          DATETIME     NULL COMMENT '前払いの入金を確認した日時',
     applied_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申込元での申込日時',
     cancelled_at        DATETIME     NULL,

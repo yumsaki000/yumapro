@@ -12,8 +12,11 @@ final class Auth
     private const SESSION_ID = '_admin_id';
     private const SESSION_ACTIVITY = '_admin_last_activity';
 
-    /** 操作がないまま、この秒数がたつとログアウト（当日受付で長く使うので長め） */
-    private const IDLE_SECONDS = 8 * 60 * 60;
+    /** ログインIDの形（半角英数字と . _ -、3〜64文字）。作るときも照合するときも同じ */
+    public const LOGIN_ID_PATTERN = '/\A[A-Za-z0-9._-]{3,64}\z/';
+
+    /** admin_login_attempts.login_id の長さ */
+    private const LOGIN_ID_MAX_LENGTH = 64;
 
     /** この分数のあいだに失敗が続いたら一時的にログインを止める */
     private const LOCK_MINUTES = 15;
@@ -26,29 +29,39 @@ final class Auth
 
     private static ?array $current = null;
 
+    public static function isValidLoginId(string $loginId): bool
+    {
+        return preg_match(self::LOGIN_ID_PATTERN, $loginId) === 1;
+    }
+
     /**
      * ログインを試す。OK / INVALID / LOCKED を返す。
-     * IDがない・無効・パスワード違いは区別しない（どれも INVALID）。
+     * IDがない・形が違う・無効・パスワード違いは区別しない（どれも INVALID）。
      */
     public static function attempt(string $loginId, string $password, string $ip): string
     {
         $pdo = Database::pdo();
         $pdo->exec('DELETE FROM admin_login_attempts WHERE attempted_at < NOW() - INTERVAL 1 DAY');
 
-        if (self::isLocked($loginId, $ip)) {
+        // 記録と回数の照合に使うID。列の長さに合わせて切る（長すぎる入力でDBエラーにしない）
+        $attemptId = mb_substr($loginId, 0, self::LOGIN_ID_MAX_LENGTH);
+        if (self::isLocked($attemptId, $ip)) {
             return self::LOCKED;
         }
 
-        $stmt = $pdo->prepare('SELECT id, password_hash, is_active FROM admins WHERE login_id = ?');
-        $stmt->execute([$loginId]);
-        $admin = $stmt->fetch() ?: null;
+        $admin = null;
+        if (self::isValidLoginId($loginId)) {
+            $stmt = $pdo->prepare('SELECT id, password_hash, is_active FROM admins WHERE login_id = ?');
+            $stmt->execute([$loginId]);
+            $admin = $stmt->fetch() ?: null;
+        }
 
         // IDがなくてもパスワード照合は行い、応答時間でIDの有無が分からないようにする
         $verified = password_verify($password, $admin['password_hash'] ?? self::dummyHash());
         $ok = $admin !== null && $verified && (int) $admin['is_active'] === 1;
 
         $pdo->prepare('INSERT INTO admin_login_attempts (login_id, ip_address, succeeded) VALUES (?, ?, ?)')
-            ->execute([$loginId, $ip, $ok ? 1 : 0]);
+            ->execute([$attemptId, $ip, $ok ? 1 : 0]);
         if (!$ok) {
             return self::INVALID;
         }
@@ -57,7 +70,7 @@ final class Auth
             $pdo->prepare('UPDATE admins SET password_hash = ? WHERE id = ?')
                 ->execute([password_hash($password, PASSWORD_DEFAULT), $admin['id']]);
         }
-        $pdo->prepare('DELETE FROM admin_login_attempts WHERE login_id = ? AND succeeded = 0')->execute([$loginId]);
+        $pdo->prepare('DELETE FROM admin_login_attempts WHERE login_id = ? AND succeeded = 0')->execute([$attemptId]);
         $pdo->prepare('UPDATE admins SET last_login_at = NOW() WHERE id = ?')->execute([$admin['id']]);
 
         Session::regenerate();
@@ -81,7 +94,7 @@ final class Auth
         if ($id === null) {
             return null;
         }
-        if (time() - (int) ($_SESSION[self::SESSION_ACTIVITY] ?? 0) > self::IDLE_SECONDS) {
+        if (time() - (int) ($_SESSION[self::SESSION_ACTIVITY] ?? 0) > Session::MAX_IDLE_SECONDS) {
             self::logout();
             Session::flash('notice', 'しばらく操作がなかったため、ログアウトしました。');
             return null;

@@ -29,3 +29,13 @@ test('ログイン後の戻り先：管理画面の中だけ許す', function ()
     assert_same('/admin', safe_admin_path('/administrator'));
     assert_same('/admin', safe_admin_path('/admin/../../etc'));
 });
+
+test('ログインID：半角英数字と . _ - の3〜64文字だけ通す', function () {
+    assert_true(App\Auth::isValidLoginId('yuma'));
+    assert_true(App\Auth::isValidLoginId('hayashi.h_01-a'));
+    assert_true(!App\Auth::isValidLoginId('ab'), '短すぎる');
+    assert_true(!App\Auth::isValidLoginId(str_repeat('a', 65)), '長すぎる（DBの列を超える）');
+    assert_true(!App\Auth::isValidLoginId('yuma sakai'), '空白');
+    assert_true(!App\Auth::isValidLoginId('ゆま'), '全角');
+    assert_true(!App\Auth::isValidLoginId("yuma\n"), '改行');
+});
