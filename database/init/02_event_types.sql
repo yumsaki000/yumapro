@@ -3,7 +3,7 @@
 
 SET NAMES utf8mb4;
 
-INSERT INTO event_types (code, name, payment_timing, form_fields, expense_items, message_templates, sort_order) VALUES
+INSERT INTO event_types (code, name, payment_timing, form_fields, expense_items, message_templates, color, sort_order) VALUES
 (
     'retreat', 'リトリート', 'prepaid',
     '[{"key": "room", "label": "部屋の希望", "type": "text", "required": false},
@@ -11,6 +11,7 @@ INSERT INTO event_types (code, name, payment_timing, form_fields, expense_items,
       {"key": "transport", "label": "交通手段", "type": "text", "required": false}]',
     '["宿泊費", "交通費", "食費", "備品"]',
     '{}',
+    'blue',
     10
 ),
 (
@@ -18,6 +19,7 @@ INSERT INTO event_types (code, name, payment_timing, form_fields, expense_items,
     '[]',
     '["店への支払い"]',
     '{}',
+    'pink',
     20
 ),
 (
@@ -26,6 +28,7 @@ INSERT INTO event_types (code, name, payment_timing, form_fields, expense_items,
       {"key": "purpose", "label": "参加の目的", "type": "textarea", "required": false}]',
     '["会場費", "講師料", "資料代"]',
     '{}',
+    'yellow',
     30
 ),
 (
@@ -33,5 +36,6 @@ INSERT INTO event_types (code, name, payment_timing, form_fields, expense_items,
     '[]',
     '["店への支払い"]',
     '{}',
+    'orange',
     40
 );

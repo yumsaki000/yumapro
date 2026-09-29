@@ -16,10 +16,10 @@ $nav = [['/', 'イベント'], ['/learn', '講座・動画'], ['/crew', 'クル�
     <title><?= e($title ?? APP_NAME) ?><?= ($title ?? '') !== APP_NAME ? ' | ' . e(APP_NAME) : '' ?></title>
     <link rel="stylesheet" href="/assets/app.css">
 </head>
-<body>
+<body class="public">
     <header class="site-header">
         <div class="site-header__inner">
-            <a class="site-header__brand" href="/">⚓ <?= e(APP_NAME) ?></a>
+            <a class="site-header__brand" href="/"><img class="site-logo" src="/assets/logo.png" alt=""><?= e(APP_NAME) ?></a>
             <span class="site-header__sub">MINATO イベント</span>
         </div>
     </header>
@@ -36,7 +36,16 @@ $nav = [['/', 'イベント'], ['/learn', '講座・動画'], ['/crew', 'クル�
             <?php endif; ?>
         </div>
     </nav>
-    <main class="container">
+    <?php if (!empty($hero)): ?>
+        <section class="hero">
+            <div class="hero__in">
+                <h1><?= nl2br(e($hero['title'])) ?></h1>
+                <?php if (($hero['lead'] ?? '') !== ''): ?><p><?= e($hero['lead']) ?></p><?php endif; ?>
+            </div>
+            <svg class="wave" viewBox="0 0 400 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 14 Q50 0 100 14 T200 14 T300 14 T400 14 V26 H0Z" fill="#fbf9f4"/></svg>
+        </section>
+    <?php endif; ?>
+    <main class="container<?= !empty($wide) ? ' container--wide' : '' ?>">
         <?php if ($flashNotice !== null): ?>
             <p class="alert alert--info flash"><?= e($flashNotice) ?></p>
         <?php endif; ?>
@@ -46,6 +55,7 @@ $nav = [['/', 'イベント'], ['/learn', '講座・動画'], ['/crew', 'クル�
         <?= $content ?>
     </main>
     <footer class="site-footer">
+        <img class="site-logo site-logo--foot" src="/assets/logo.png" alt="">
         <a href="https://minatocrew.com/" target="_blank" rel="noopener">MINATO 公式サイト</a>
         <a href="<?= e(App\Settings::get('privacy_url')) ?>" target="_blank" rel="noopener">プライバシーポリシー</a>
         <?php if ($me !== null): ?>

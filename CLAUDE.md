@@ -22,6 +22,12 @@ MINATO のイベント（リトリート／女子会／自己啓発／合コン�
 - 今のスプレッドシートとGoogleフォームは刷新してよい。こくちーず・PeatixのCSV取り込みはしない（こくちーずは掲載だけ、Peatixは未使用）
 - 先方の今の運用・公式サイトの調査は `docs/current-sheet-analysis.md`・`docs/official-site.md`。ヒアリングの質問一覧は `docs/hearing-sheet.md`
 
+## デザイン
+
+- 公式サイトに合わせる：フォント Noto Sans JP、紺 `#000c2e`・オレンジ `#dd8b0f`、アクセントに淡いピンク `#ffdfdf`／`#ff99b8`・水色 `#ccf4ff`・黄色 `#fff799`。ロゴは `public/assets/logo.png`（公式サイトのもの）
+- 参加者向け（`body.public`）は「海辺の午後」案：白と生成りの明るい下地、丸いボタン、カードは角丸18px、見出し帯にロゴの「重なる3つの円」。管理画面は紺のヘッダーのまま（`app.css` の `body.public` の中だけが参加者向けの見た目）
+- 形式ごとの色分けは `event_types.color`（pink / blue / yellow / orange / navy）。回の写真は `storage/photos/`（`Photos`）
+
 ## 技術構成
 
 - PHP 8.3（フレームワークなし、Composer 依存なし。本番はファイルを置くだけで動く状態を保つ）

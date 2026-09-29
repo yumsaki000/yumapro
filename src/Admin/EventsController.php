@@ -8,6 +8,7 @@ use App\Auth;
 use App\Events;
 use App\Form;
 use App\Config;
+use App\Photos;
 use App\Registrations;
 use App\Session;
 use App\Surveys;
@@ -39,12 +40,20 @@ final class EventsController
 
         if (is_post()) {
             [$values, $errors] = self::read($_POST, $types);
+            // ほかの入力に誤りがあるときは写真を保存しない（保存されないまま写真のファイルだけ残らないように）
+            $upload = $errors === [] ? Photos::store($_FILES['photo'] ?? []) : ['name' => null, 'error' => null];
+            if ($upload['error'] !== null) {
+                $errors[] = $upload['error'];
+            }
             if ($errors === []) {
                 if ($values['cancel_deadline'] === null && $values['payment_timing'] === 'prepaid') {
                     // 今のキャンセルポリシー（開催1週間前以降は返金不可）に合わせた既定
                     $values['cancel_deadline'] = date('Y-m-d H:i:00', strtotime($values['starts_at'] . ' -7 days'));
                 }
                 $id = Events::create($values, (int) $admin['id']);
+                if ($upload['name'] !== null) {
+                    Events::setPhoto($id, $upload['name']);
+                }
                 Session::flash('notice', "「{$values['title']}」を作りました。");
                 redirect('/admin/events/' . $id);
                 return;
@@ -87,8 +96,20 @@ final class EventsController
 
         if (is_post()) {
             [$values, $errors] = self::read($_POST, $types);
+            // ほかの入力に誤りがあるときは写真を保存しない（保存されないまま写真のファイルだけ残らないように）
+            $upload = $errors === [] ? Photos::store($_FILES['photo'] ?? []) : ['name' => null, 'error' => null];
+            if ($upload['error'] !== null) {
+                $errors[] = $upload['error'];
+            }
             if ($errors === []) {
                 Events::update((int) $event['id'], $values);
+                if ($upload['name'] !== null) {
+                    Photos::delete($event['photo']);
+                    Events::setPhoto((int) $event['id'], $upload['name']);
+                } elseif (Form::checked($_POST, 'remove_photo')) {
+                    Photos::delete($event['photo']);
+                    Events::setPhoto((int) $event['id'], null);
+                }
                 Session::flash('notice', "「{$values['title']}」を保存しました。");
                 redirect('/admin/events/' . $event['id']);
                 return;

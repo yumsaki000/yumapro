@@ -32,6 +32,7 @@ $router = new Router();
 
 // ── 参加者向け：掲示板と個人専用ページ ─────────────────────────
 $router->get('/', [BoardController::class, 'index']);
+$router->get('/photos/{name}', fn (string $name) => App\Photos::serve($name));
 $router->get('/e/{slug}', [BoardController::class, 'show']);
 $router->form('/e/{slug}/apply', [BoardController::class, 'apply']);
 $router->get('/e/{slug}/done', [BoardController::class, 'done']);

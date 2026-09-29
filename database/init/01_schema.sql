@@ -41,6 +41,7 @@ CREATE TABLE event_types (
     form_fields         JSON         NOT NULL COMMENT '追加の申込項目の定義',
     expense_items       JSON         NOT NULL COMMENT '経費項目の定義',
     message_templates   JSON         NOT NULL COMMENT '案内文テンプレート（募集／リマインド／締切／お礼）',
+    color               VARCHAR(20)  NOT NULL DEFAULT 'navy' COMMENT '掲示板の色分け: pink / blue / yellow / orange / navy',
     sort_order          INT          NOT NULL DEFAULT 0,
     created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -94,6 +95,7 @@ CREATE TABLE events (
     cancel_policy       TEXT         NULL COMMENT 'キャンセル規定',
     organizer_amount    INT          NOT NULL DEFAULT 0 COMMENT '主催分（円）。収支 = 集金 - 経費 - 主催分',
     description         TEXT         NULL COMMENT '公開ページの説明文',
+    photo               VARCHAR(64)  NULL COMMENT '写真のファイル名（storage/photos に保存。/photos/{名前} で表示）',
     extra               JSON         NULL COMMENT '形式ごとの追加設定',
     status              ENUM('draft', 'open', 'closed', 'done', 'cancelled') NOT NULL DEFAULT 'draft'
                         COMMENT '下書き／募集中／締切／終了／中止',

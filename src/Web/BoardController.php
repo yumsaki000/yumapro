@@ -8,6 +8,7 @@ use App\Applications;
 use App\Channels;
 use App\Customers;
 use App\Events;
+use App\Faq;
 use App\Form;
 use App\MailTemplates;
 use App\Session;
@@ -25,6 +26,8 @@ final class BoardController
             'title' => APP_NAME,
             'events' => Events::publicList(),
             'intro' => Settings::get('site_intro'),
+            'hero' => ['title' => Settings::get('site_tagline'), 'lead' => Settings::get('site_lead')],
+            'wide' => true,
         ]);
     }
 
@@ -38,6 +41,8 @@ final class BoardController
             'remaining' => Applications::remaining($event),
             'from' => Applications::entryFrom($_GET['from'] ?? null),
             'cancelPolicy' => trim((string) $event['cancel_policy']) ?: Settings::get('cancel_policy_default'),
+            'faq' => Faq::parse(Settings::get('event_faq')),
+            'wide' => true,
         ]);
     }
 

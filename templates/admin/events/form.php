@@ -13,7 +13,7 @@ $v = fn (string $key) => e($values[$key] ?? '');
         <div class="alert alert--error" role="alert"><ul><?php foreach ($errors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
     <?php endif; ?>
 
-    <form method="post" action="<?= e($action) ?>" class="form">
+    <form method="post" action="<?= e($action) ?>" class="form" enctype="multipart/form-data">
         <?= csrf_field() ?>
 
         <div class="form__row">
@@ -150,6 +150,16 @@ $v = fn (string $key) => e($values[$key] ?? '');
             <span class="form__label">説明文（掲示板に出す）</span>
             <textarea name="description" rows="6"><?= $v('description') ?></textarea>
         </label>
+
+        <div class="form__field">
+            <span class="form__label">写真（掲示板のカードと回のページに出す）</span>
+            <?php if ($event !== null && $event['photo'] !== null): ?>
+                <img class="photo-preview" src="<?= e(App\Photos::url($event['photo'])) ?>" alt="">
+                <label class="form__check"><input type="checkbox" name="remove_photo" value="1"> <span>この写真を消す</span></label>
+            <?php endif; ?>
+            <input type="file" name="photo" accept="image/*">
+            <span class="form__help">JPEG・PNG・WebP、8MBまで。横1600pxに縮めて保存します。ないときは形式の色で埋めます</span>
+        </div>
 
         <label class="form__field">
             <span class="form__label">主催分（円）</span>

@@ -147,6 +147,7 @@ a {
     color: var(--color-text);
     background: #ffffff;
     border: 1px solid var(--color-border);
+    text-decoration: none;
     border-radius: 8px;
     cursor: pointer;
 }
@@ -848,4 +849,358 @@ pre.plain {
 .lesson-body {
     line-height: 1.85;
     overflow-wrap: anywhere;
+}
+
+/* ── 参加者向けのデザイン「海辺の午後」（B案。管理画面には当てない） ─────────── */
+
+body.public {
+    --color-bg: #fbf9f4;
+    --color-border: #ece7dc;
+    --color-text: #2b2f36;
+    --color-muted: #7a8089;
+    --color-pink: #ff99b8;
+    --color-pink-soft: #ffdfdf;
+    --color-sky: #ccf4ff;
+    --color-yellow: #fff799;
+}
+
+body.public .card {
+    border-color: var(--color-border);
+    border-radius: 18px;
+    box-shadow: 0 6px 18px rgba(0, 12, 46, 0.06);
+}
+
+body.public .button {
+    border-radius: 999px;
+}
+
+body.public .button--primary {
+    background: var(--color-orange);
+    border-color: var(--color-orange);
+    box-shadow: 0 6px 14px rgba(221, 139, 15, 0.3);
+}
+
+body.public .button--large {
+    padding: 15px 24px;
+}
+
+body.public .site-header {
+    color: var(--color-navy);
+    background: #ffffff;
+    border-bottom: 0;
+}
+
+body.public .site-header__brand {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: var(--color-navy);
+}
+
+body.public .site-header__sub {
+    color: var(--color-muted);
+    opacity: 1;
+}
+
+body.public .site-nav {
+    border-bottom: 1px solid var(--color-border);
+}
+
+body.public .badge--ok {
+    color: #1f7a5a;
+    border-color: #1f7a5a;
+}
+
+body.public .badge--navy {
+    background: var(--color-navy);
+}
+
+body.public .form input,
+body.public .form select,
+body.public .form textarea {
+    border-radius: 12px;
+}
+
+.site-logo {
+    width: 36px;
+    height: 30px;
+    object-fit: contain;
+}
+
+.site-logo--foot {
+    width: 26px;
+    height: 22px;
+    opacity: 0.8;
+}
+
+/* 見出し帯 */
+.hero {
+    position: relative;
+    overflow: hidden;
+    color: var(--color-navy);
+    background: linear-gradient(160deg, #ccf4ff 0%, #ffdfdf 100%);
+}
+
+.hero__in {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 16px 36px;
+}
+
+.hero h1 {
+    margin: 0 0 6px;
+    font-size: 1.45rem;
+    line-height: 1.35;
+}
+
+.hero p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* ロゴの「重なる3つの円」。スマホでは文字にかからないよう右上の隅に小さく */
+.hero::after {
+    position: absolute;
+    top: -34px;
+    right: -34px;
+    width: 120px;
+    height: 120px;
+    content: "";
+    opacity: 0.7;
+    background:
+        radial-gradient(circle at 36% 40%, rgba(255, 153, 184, 0.55) 0 30%, transparent 31%),
+        radial-gradient(circle at 64% 40%, rgba(120, 205, 235, 0.55) 0 30%, transparent 31%),
+        radial-gradient(circle at 50% 66%, rgba(255, 230, 120, 0.7) 0 30%, transparent 31%);
+}
+
+.hero .wave {
+    position: absolute;
+    z-index: 2;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 26px;
+}
+
+.section-head h1 {
+    margin: 4px 0 4px;
+    font-size: 1.25rem;
+    color: var(--color-navy);
+}
+
+.section-head h1 small {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--color-muted);
+}
+
+.section-head p {
+    margin: 0 0 14px;
+    font-size: 0.92rem;
+    color: var(--color-muted);
+}
+
+.back {
+    margin: 0 0 10px;
+    font-size: 0.9rem;
+}
+
+/* 回のカード */
+.event-grid {
+    display: grid;
+    gap: 16px;
+}
+
+/* 並べるカードは gap で間をあけるので、.card + .card の余白を消す */
+.event-grid > .card,
+.event-detail > .card {
+    margin-top: 0;
+}
+
+.event-card {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+}
+
+.event-card__photo {
+    position: relative;
+    display: block;
+    height: 120px;
+    background-position: center;
+    background-size: cover;
+}
+
+.event-card__photo .tag-type {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+}
+
+.photo--pink { background-image: linear-gradient(135deg, #ffdfdf, #ffc2d4); }
+.photo--blue { background-image: linear-gradient(135deg, #ccf4ff, #a9e4f7); }
+.photo--yellow { background-image: linear-gradient(135deg, #fff799, #ffe9a8); }
+.photo--orange { background-image: linear-gradient(135deg, #ffe7cf, #ffd0a3); }
+.photo--navy { background-image: linear-gradient(135deg, #0b2a5c, #2c6fb3); }
+
+.event-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 12px 16px 14px;
+}
+
+.event-card__title {
+    margin: 4px 0 2px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-navy);
+    text-decoration: none;
+}
+
+.event-card__row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 10px;
+}
+
+.tag-type {
+    display: inline-block;
+    padding: 2px 10px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    border-radius: 999px;
+}
+
+.tag-type--pink { color: #ffffff; background: var(--color-pink); }
+.tag-type--blue { color: #0f4c68; background: var(--color-sky); }
+.tag-type--yellow { color: #6b5300; background: var(--color-yellow); }
+.tag-type--orange { color: #a33a5a; background: var(--color-pink-soft); }
+.tag-type--navy { color: #ffffff; background: var(--color-navy); }
+
+.seats {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1f7a5a;
+}
+
+.seats--few { color: #d24a6a; }
+.seats--full { color: var(--color-muted); }
+
+/* 回の詳細 */
+.event-detail {
+    display: grid;
+    gap: 16px;
+}
+
+.event-title {
+    margin: 6px 0 8px;
+    font-size: 1.35rem;
+    color: var(--color-navy);
+}
+
+.event-photo {
+    margin: -8px -8px 14px;
+    overflow: hidden;
+    border-radius: 14px;
+}
+
+.event-photo img {
+    display: block;
+    width: 100%;
+}
+
+.event-aside .price {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-navy);
+}
+
+.event-aside .price small {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-muted);
+}
+
+.event-aside__status {
+    margin: 6px 0 12px;
+    font-size: 0.9rem;
+}
+
+.faq {
+    margin: 0;
+}
+
+.faq dt {
+    margin-top: 8px;
+    font-weight: 700;
+    color: var(--color-navy);
+}
+
+.faq dd {
+    margin: 0;
+}
+
+.photo-preview {
+    display: block;
+    max-width: 240px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+}
+
+.small {
+    font-size: 0.82rem;
+}
+
+@media (min-width: 900px) {
+    .hero__in {
+        padding: 56px 24px 64px;
+    }
+
+    .hero h1 {
+        font-size: 2.1rem;
+    }
+
+    .hero p {
+        font-size: 1.05rem;
+    }
+
+    .hero::after {
+        top: 50%;
+        right: 8%;
+        opacity: 0.85;
+        transform: translateY(-50%) scale(1.5);
+        transform-origin: right center;
+    }
+
+    body.public .site-header__inner,
+    body.public .site-nav__inner,
+    body.public .site-footer {
+        max-width: 960px;
+    }
+
+    .event-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    .event-card__photo {
+        height: 150px;
+    }
+
+    .event-detail {
+        grid-template-columns: 1.6fr 1fr;
+        align-items: start;
+    }
+
+    .event-aside {
+        position: sticky;
+        top: 16px;
+    }
 }

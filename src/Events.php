@@ -39,7 +39,10 @@ final class Events
         'organizer_amount', 'description', 'status',
     ];
 
-    private const SELECT = 'SELECT e.*, t.name AS type_name, t.code AS type_code, t.expense_items AS type_expense_items,
+    /** 掲示板の色分け（形式ごと）。公式サイトのアクセントの色 */
+    public const TYPE_COLORS = ['pink' => 'ピンク', 'blue' => '水色', 'yellow' => '黄色', 'orange' => 'オレンジ', 'navy' => '紺'];
+
+    private const SELECT = 'SELECT e.*, t.name AS type_name, t.code AS type_code, t.color AS type_color, t.expense_items AS type_expense_items,
             (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id AND r.status = \'applied\') AS applied_count,
             (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id AND r.status = \'waitlisted\') AS waitlisted_count,
             (SELECT COUNT(*) FROM registrations r JOIN checkins c ON c.registration_id = r.id
@@ -161,6 +164,17 @@ final class Events
             throw new \InvalidArgumentException('状態が正しくありません');
         }
         Database::pdo()->prepare('UPDATE events SET status = ? WHERE id = ?')->execute([$status, $id]);
+    }
+
+    public static function setPhoto(int $id, ?string $photo): void
+    {
+        Database::pdo()->prepare('UPDATE events SET photo = ? WHERE id = ?')->execute([$photo, $id]);
+    }
+
+    /** 形式の色のクラス名（tag-type--pink など）。知らない値は navy */
+    public static function colorClass(?string $color): string
+    {
+        return 'tag-type--' . (isset(self::TYPE_COLORS[$color ?? '']) ? $color : 'navy');
     }
 
     public static function setOrganizerAmount(int $id, int $amount): void

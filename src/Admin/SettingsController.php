@@ -17,7 +17,7 @@ use App\View;
 final class SettingsController
 {
     private const SECTIONS = [
-        '掲示板' => ['site_intro', 'contact_text', 'official_line_url', 'privacy_url'],
+        '掲示板' => ['site_tagline', 'site_lead', 'site_intro', 'event_faq', 'contact_text', 'official_line_url', 'privacy_url'],
         '運営への通知' => ['staff_notify_email', 'staff_notify_all'],
         '申込フォームの同意文' => ['notice_text', 'payment_text', 'cancel_policy_default', 'bank_account'],
         'メールの差出人と署名' => ['mail_from_name', 'mail_from_address', 'mail_signature'],
