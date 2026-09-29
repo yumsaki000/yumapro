@@ -5,7 +5,8 @@ $menu = [
     ['/admin/events', '回の一覧', '回の作成・複製、申込者の一覧、当日受付'],
     ['/admin/customers', '顧客台帳', '顧客の検索、参加履歴、名寄せ、出禁'],
     ['/admin/accounting', '会計', '回ごとの収入・経費・収支'],
-    ['/admin/channels', '設定', '「どこで知りましたか」の選択肢'],
+    ['/admin/stats', '集計', '窓口別・新規／リピート・男女の集客数'],
+    ['/admin/settings', '設定', '掲示板・申込フォーム・メールの文言、選択肢'],
 ];
 if ($admin['role'] === 'owner') {
     $menu[] = ['/admin/members', '運営メンバー', 'アカウントの追加・無効化・パスワード再設定'];
@@ -13,6 +14,7 @@ if ($admin['role'] === 'owner') {
 ?>
 <section class="card">
     <h1>ようこそ、<?= e($admin['display_name']) ?> さん</h1>
+    <p class="text-muted">参加者向けの掲示板：<a href="/" target="_blank"><?= e(rtrim((string) App\Config::get('APP_URL', ''), '/')) ?>/</a>（「募集中」の回が出ます）</p>
 
     <?php if ($upcoming !== []): ?>
         <h2>これからの回</h2>

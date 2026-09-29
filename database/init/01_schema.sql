@@ -48,6 +48,16 @@ CREATE TABLE event_types (
     UNIQUE KEY uq_event_types_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 画面やメールの文言など、管理画面で変えられる設定（既定値は src/Settings.php。ここには変えた値だけ入る）
+CREATE TABLE settings (
+    `key`       VARCHAR(50)  NOT NULL,
+    value       TEXT         NOT NULL,
+    updated_by  INT UNSIGNED NULL,
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`key`),
+    CONSTRAINT fk_settings_admin FOREIGN KEY (updated_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 「どこで知りましたか」の選択肢（管理画面で増減できる。過去の記録は名前で持つので、消さずに無効にする）
 CREATE TABLE channels (
     id          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -163,6 +173,10 @@ CREATE TABLE registrations (
     payment_method      VARCHAR(20)  NULL COMMENT 'cash / bank_transfer / paypay / other',
     prepaid_at          DATETIME     NULL COMMENT '前払いの入金を確認した日時',
     channel             VARCHAR(50)  NULL COMMENT 'どこで知ったか（申込時の選択。channels.name）',
+    entry_from          VARCHAR(30)  NULL COMMENT 'どの窓口のリンクから来たか（?from= の値。集客の集計用）',
+    ban_check           ENUM('none', 'suspect', 'confirmed') NOT NULL DEFAULT 'none'
+                        COMMENT '申込時の出禁チェック: 該当なし／名前だけ一致（要確認）／連絡先が一致（確定）',
+    consented_at        DATETIME     NULL COMMENT '申込フォームで注意事項などに同意した日時',
     note                VARCHAR(255) NULL COMMENT '運営メモ',
     applied_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申込元での申込日時',
     cancelled_at        DATETIME     NULL,
@@ -196,6 +210,36 @@ CREATE TABLE checkins (
     UNIQUE KEY uq_checkins_registration (registration_id),
     CONSTRAINT fk_checkins_registration FOREIGN KEY (registration_id) REFERENCES registrations (id) ON DELETE CASCADE,
     CONSTRAINT fk_checkins_admin FOREIGN KEY (checked_in_by) REFERENCES admins (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 事後アンケート（1申込につき1回）
+CREATE TABLE surveys (
+    id                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    registration_id     INT UNSIGNED NOT NULL,
+    satisfaction        TINYINT UNSIGNED NOT NULL COMMENT '満足度 1〜5',
+    return_intent       ENUM('yes', 'maybe', 'no') NOT NULL COMMENT 'また参加したい／わからない／しない',
+    comment             TEXT         NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_surveys_registration (registration_id),
+    CONSTRAINT fk_surveys_registration FOREIGN KEY (registration_id) REFERENCES registrations (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- メールの送信記録（同じメールを二度送らないため、と、送れなかったときの確認用）
+CREATE TABLE mail_log (
+    id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    kind                VARCHAR(30)  NOT NULL COMMENT 'confirm / waitlist / promoted / cancelled / reminder / thanks',
+    registration_id     INT UNSIGNED NULL,
+    customer_id         INT UNSIGNED NULL,
+    to_email            VARCHAR(255) NOT NULL,
+    subject             VARCHAR(255) NOT NULL,
+    status              ENUM('sent', 'failed') NOT NULL,
+    error               VARCHAR(255) NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_mail_log_registration (registration_id, kind),
+    CONSTRAINT fk_mail_log_registration FOREIGN KEY (registration_id) REFERENCES registrations (id) ON DELETE SET NULL,
+    CONSTRAINT fk_mail_log_customer FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 経費（1回に複数項目）

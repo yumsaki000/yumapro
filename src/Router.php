@@ -40,7 +40,7 @@ final class Router
         foreach ($this->routes[$method] ?? [] as $pattern => $handler) {
             $regex = '#^' . preg_replace('#\{(\w+)\}#', '(?P<$1>[^/]+)', $pattern) . '$#';
             if (preg_match($regex, $path, $matches)) {
-                $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
+                $params = array_values(array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY));
                 $handler(...$params);
                 return;
             }

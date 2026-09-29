@@ -8,7 +8,8 @@ $nav = [
     ['/admin/events', '回'],
     ['/admin/customers', '顧客'],
     ['/admin/accounting', '会計'],
-    ['/admin/channels', '設定'],
+    ['/admin/stats', '集計'],
+    ['/admin/settings', '設定'],
 ];
 if ($admin !== null && $admin['role'] === 'owner') {
     $nav[] = ['/admin/members', 'メンバー'];
@@ -22,13 +23,13 @@ $flashError = App\Session::flash('error');
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title><?= e($title ?? '管理画面') ?> | MINATO イベント 管理画面</title>
+    <title><?= e($title ?? '管理画面') ?> | <?= e(ADMIN_NAME) ?>（<?= e(APP_NAME) ?> 管理画面）</title>
     <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body class="admin">
     <header class="admin-header">
         <div class="admin-header__inner">
-            <a class="admin-header__brand" href="/admin">⚓ MINATO イベント 管理画面</a>
+            <a class="admin-header__brand" href="/admin">⚓ <?= e(ADMIN_NAME) ?> <span class="admin-header__sub"><?= e(APP_NAME) ?> 管理画面</span></a>
             <?php if ($admin !== null): ?>
                 <form class="admin-header__logout" method="post" action="/admin/logout">
                     <?= csrf_field() ?>
@@ -42,7 +43,7 @@ $flashError = App\Session::flash('error');
         <nav class="admin-nav">
             <div class="admin-nav__inner">
                 <?php foreach ($nav as [$href, $label]): ?>
-                    <?php $active = $path === $href || str_starts_with($path, $href . '/'); ?>
+                    <?php $active = $path === $href || str_starts_with($path, $href . '/') || ($href === '/admin/settings' && str_starts_with($path, '/admin/channels')); ?>
                     <a class="admin-nav__link<?= $active ? ' is-active' : '' ?>" href="<?= e($href) ?>"><?= e($label) ?></a>
                 <?php endforeach; ?>
             </div>

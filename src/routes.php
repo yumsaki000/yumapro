@@ -7,8 +7,11 @@ use App\Admin\ChannelsController;
 use App\Admin\CheckinController;
 use App\Admin\CustomersController;
 use App\Admin\EventsController;
+use App\Admin\MailController;
 use App\Admin\MembersController;
 use App\Admin\RegistrationsController;
+use App\Admin\SettingsController;
+use App\Admin\StatsController;
 use App\Auth;
 use App\Config;
 use App\Database;
@@ -16,13 +19,20 @@ use App\Events;
 use App\Router;
 use App\Session;
 use App\View;
+use App\Web\BoardController;
+use App\Web\MyPageController;
 
 $router = new Router();
 
-// 公開トップ（準備中）
-$router->get('/', function (): void {
-    echo View::render('home', ['title' => 'MINATO イベント']);
-});
+// ── 参加者向け：掲示板（DECK）と個人専用ページ ─────────────────
+$router->get('/', [BoardController::class, 'index']);
+$router->get('/e/{slug}', [BoardController::class, 'show']);
+$router->form('/e/{slug}/apply', [BoardController::class, 'apply']);
+$router->get('/e/{slug}/done', [BoardController::class, 'done']);
+$router->get('/my/{token}', [MyPageController::class, 'show']);
+$router->post('/my/{token}/cancel/{id}', [MyPageController::class, 'cancel']);
+$router->post('/my/{token}/mail', [MyPageController::class, 'mail']);
+$router->form('/my/{token}/survey/{id}', [MyPageController::class, 'survey']);
 
 // 動作確認用：アプリとDBがつながっているか
 $router->get('/health', function (): void {
@@ -101,6 +111,7 @@ $router->get('/admin/events/{id}', [EventsController::class, 'show']);
 $router->form('/admin/events/{id}/edit', [EventsController::class, 'edit']);
 $router->post('/admin/events/{id}/copy', [EventsController::class, 'copy']);
 $router->post('/admin/events/{id}/status', [EventsController::class, 'status']);
+$router->post('/admin/events/{eventId}/mails', [MailController::class, 'send']);
 
 // ── 申込（手入力・変更） ─────────────────────────────
 $router->form('/admin/events/{eventId}/registrations/new', [RegistrationsController::class, 'create']);
@@ -130,7 +141,9 @@ $router->get('/admin/customers/{id}', [CustomersController::class, 'show']);
 $router->form('/admin/customers/{id}/edit', [CustomersController::class, 'edit']);
 $router->post('/admin/customers/{id}/ban', [CustomersController::class, 'ban']);
 
-// ── 設定・運営メンバー ─────────────────────────────────
+// ── 集計・設定・運営メンバー ─────────────────────────────
+$router->get('/admin/stats', [StatsController::class, 'index']);
+$router->form('/admin/settings', [SettingsController::class, 'index']);
 $router->form('/admin/channels', [ChannelsController::class, 'index']);
 $router->get('/admin/members', [MembersController::class, 'index']);
 $router->form('/admin/members/new', [MembersController::class, 'create']);

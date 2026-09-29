@@ -17,9 +17,12 @@ final class Registrations
     public const SOURCES = ['own_form' => '申込フォーム', 'manual' => '手入力', 'legacy' => '移行'];
 
     private const SELECT = 'SELECT r.*, c.name AS customer_name, c.name_kana AS customer_kana, c.gender AS customer_gender,
-            c.phone AS customer_phone, c.banned_at AS customer_banned_at,
+            c.phone AS customer_phone, c.email AS customer_email, c.access_token AS customer_token, c.banned_at AS customer_banned_at,
             k.id AS checkin_id, k.arrived_at, k.paid_amount, k.payment_method AS checkin_payment_method, k.note AS checkin_note,
-            e.title AS event_title, e.starts_at AS event_starts_at, e.payment_timing AS event_payment_timing, e.status AS event_status
+            e.title AS event_title, e.slug AS event_slug, e.starts_at AS event_starts_at, e.ends_at AS event_ends_at,
+            e.payment_timing AS event_payment_timing, e.status AS event_status, e.venue_name AS event_venue_name,
+            e.venue_address AS event_venue_address, e.venue_url AS event_venue_url, e.cancel_policy AS event_cancel_policy,
+            e.cancel_deadline AS event_cancel_deadline, e.capacity AS event_capacity
         FROM registrations r
         JOIN customers c ON c.id = r.customer_id
         JOIN events e ON e.id = r.event_id
@@ -61,23 +64,28 @@ final class Registrations
     /**
      * 申込を追加する。定員に達していればキャンセル待ちにする（$forceApply なら定員を超えても申込にする）。
      *
-     * @param array{fee: int, channel: ?string, note: ?string, source: string, prepaid: bool, payment_method: ?string} $data
+     * @param array{fee: int, channel: ?string, note: ?string, source: string, prepaid: bool, payment_method: ?string,
+     *              entry_from?: ?string, ban_check?: string, consented_at?: ?string, answers?: ?string} $data
+     * @param ?string $forceStatus 'waitlisted' を渡すと定員に関係なくキャンセル待ちにする（出禁の疑いがあるとき）
      * @return array{id: int, status: string}
      */
-    public static function create(int $eventId, int $customerId, array $data, ?int $adminId, bool $forceApply = false): array
+    public static function create(int $eventId, int $customerId, array $data, ?int $adminId, bool $forceApply = false, ?string $forceStatus = null): array
     {
         $pdo = Database::pdo();
         $pdo->beginTransaction();
         try {
             $event = self::lockEvent($pdo, $eventId);
             $gender = self::customerGender($pdo, $customerId);
-            $status = (!$forceApply && self::isFull($pdo, $event, $gender)) ? 'waitlisted' : 'applied';
+            $status = $forceStatus ?? ((!$forceApply && self::isFull($pdo, $event, $gender)) ? 'waitlisted' : 'applied');
             $pdo->prepare(
-                'INSERT INTO registrations (event_id, customer_id, source, status, fee, channel, note, prepaid_at, payment_method, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                'INSERT INTO registrations (event_id, customer_id, source, status, fee, channel, note, prepaid_at, payment_method,
+                    entry_from, ban_check, consented_at, answers, created_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             )->execute([
                 $eventId, $customerId, $data['source'], $status, $data['fee'], $data['channel'], $data['note'],
-                $data['prepaid'] ? date('Y-m-d H:i:s') : null, $data['prepaid'] ? $data['payment_method'] : null, $adminId,
+                $data['prepaid'] ? date('Y-m-d H:i:s') : null, $data['prepaid'] ? $data['payment_method'] : null,
+                $data['entry_from'] ?? null, $data['ban_check'] ?? 'none', $data['consented_at'] ?? null, $data['answers'] ?? null,
+                $adminId,
             ]);
             $id = (int) $pdo->lastInsertId();
             $pdo->commit();
@@ -99,6 +107,58 @@ final class Registrations
     {
         Database::pdo()->prepare("UPDATE registrations SET status = 'cancelled', cancelled_at = NOW() WHERE id = ? AND status <> 'cancelled'")
             ->execute([$id]);
+    }
+
+    /**
+     * キャンセルにして、空いた分だけキャンセル待ちの人を繰り上げる。
+     *
+     * @return list<array> 繰り上がった申込（メールを送るため）
+     */
+    public static function cancelAndPromote(int $id): array
+    {
+        $registration = self::find($id);
+        if ($registration === null) {
+            return [];
+        }
+        self::cancel($id);
+        return $registration['status'] === 'applied' ? self::promoteWaitlist((int) $registration['event_id']) : [];
+    }
+
+    /**
+     * 定員に空きがあるあいだ、キャンセル待ちの人を申込順に繰り上げる（出禁が確定している人は飛ばす）。
+     *
+     * @return list<array> 繰り上がった申込
+     */
+    public static function promoteWaitlist(int $eventId): array
+    {
+        $pdo = Database::pdo();
+        $promoted = [];
+        $pdo->beginTransaction();
+        try {
+            $event = self::lockEvent($pdo, $eventId);
+            if (!in_array($event['status'], ['open', 'closed'], true)) {
+                $pdo->commit();
+                return [];
+            }
+            $stmt = $pdo->prepare(
+                "SELECT r.id, c.gender FROM registrations r JOIN customers c ON c.id = r.customer_id
+                 WHERE r.event_id = ? AND r.status = 'waitlisted' AND r.ban_check <> 'confirmed'
+                 ORDER BY r.applied_at, r.id FOR UPDATE"
+            );
+            $stmt->execute([$eventId]);
+            foreach ($stmt->fetchAll() as $row) {
+                if (self::isFull($pdo, $event, $row['gender'])) {
+                    continue;
+                }
+                $pdo->prepare("UPDATE registrations SET status = 'applied', cancelled_at = NULL WHERE id = ?")->execute([$row['id']]);
+                $promoted[] = (int) $row['id'];
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+        return array_values(array_filter(array_map(fn ($id) => self::find($id), $promoted)));
     }
 
     /** キャンセル・キャンセル待ちから申込に戻す。定員に達していればキャンセル待ち（$forceApply なら申込） */

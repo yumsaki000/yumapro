@@ -10,6 +10,7 @@ use App\Customers;
 use App\Database;
 use App\Events;
 use App\Form;
+use App\MailTemplates;
 use App\Registrations;
 use App\Session;
 use App\View;
@@ -166,8 +167,12 @@ final class RegistrationsController
     {
         Auth::requireAdmin();
         $registration = Registrations::find((int) $id) ?? abort_not_found();
-        Registrations::cancel((int) $registration['id']);
-        Session::flash('notice', "「{$registration['customer_name']}」をキャンセルにしました。");
+        $promoted = Registrations::cancelAndPromote((int) $registration['id']);
+        foreach ($promoted as $p) {
+            MailTemplates::sendKind('promoted', $p);
+        }
+        $names = implode('、', array_map(fn ($p) => "「{$p['customer_name']}」", $promoted));
+        Session::flash('notice', "「{$registration['customer_name']}」をキャンセルにしました。" . ($promoted !== [] ? "{$names}をキャンセル待ちから繰り上げ、メールで連絡しました。" : ''));
         redirect(self::back('/admin/events/' . $registration['event_id']));
     }
 

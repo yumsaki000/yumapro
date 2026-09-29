@@ -1,6 +1,6 @@
-# MINATOイベント管理アプリ
+# MINATO DECK
 
-MINATO のイベントの告知・申込・当日受付・会計を少人数で回すための Web アプリ。
+MINATO のイベントの告知・申込・当日受付・会計を少人数で回すための Web アプリ。参加者向けの掲示板が **MINATO DECK**（甲板）、管理画面が **BRIDGE**（船橋）。
 
 - 要件・背景：[docs/requirements.md](docs/requirements.md)
 - 申込の受け付けと顧客台帳（案）：[docs/data-intake.md](docs/data-intake.md)
@@ -20,8 +20,9 @@ Docker Desktop が起動している状態で：
 make setup
 ```
 
-- アプリ：<http://localhost:8080>
-- 管理画面：<http://localhost:8080/admin>（先に `make admin` でアカウントを作る）
+- 掲示板（DECK）：<http://localhost:8080>
+- 管理画面（BRIDGE）：<http://localhost:8080/admin>（先に `make admin` でアカウントを作る）
+- ローカルではメールを送らず `storage/mail/` にファイルとして書く（`.env` の `MAIL_DRIVER=log`）
 - 動作確認：<http://localhost:8080/health>
 - phpMyAdmin：<http://localhost:8081>
 

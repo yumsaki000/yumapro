@@ -1,7 +1,10 @@
 <?php
 /** @var array $event */
 /** @var array $registrations */
+/** @var array $survey */
+/** @var string $baseUrl */
 $id = (int) $event['id'];
+$banLabels = ['suspect' => ['badge badge--warn', '要確認（出禁と同名）'], 'confirmed' => ['badge badge--danger', '出禁該当']];
 $capacity = $event['capacity'] !== null ? (int) $event['capacity'] : null;
 $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== 'cancelled' && $r['prepaid_at'] !== null));
 ?>
@@ -58,6 +61,51 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
 </section>
 
 <section class="card">
+    <h2>申込フォームへのリンク</h2>
+    <?php if ($event['status'] === 'open'): ?>
+        <p class="text-muted">窓口ごとに分けたリンクです。貼った場所ごとの申込数が「集計」で分かります。</p>
+        <ul class="copy-list">
+            <li>共通：<code><?= e($baseUrl) ?>/e/<?= e($event['slug']) ?></code></li>
+            <?php foreach (App\Stats::ENTRY_KEYS as $key => $label): ?>
+                <li><?= e($label) ?>：<code><?= e($baseUrl) ?>/e/<?= e($event['slug']) ?>?from=<?= e($key) ?></code></li>
+            <?php endforeach; ?>
+        </ul>
+    <?php else: ?>
+        <p class="text-muted">状態を「募集中」にすると、掲示板に出て申込を受け付けます。</p>
+    <?php endif; ?>
+
+    <h2>メール</h2>
+    <p class="text-muted">前日のリマインドと翌日のお礼は自動で送ります（サーバーの定期実行）。今すぐ送りたいときはこちら。すでに送った人には送りません。</p>
+    <div class="actions">
+        <form class="inline-form" method="post" action="/admin/events/<?= $id ?>/mails" onsubmit="return confirm('申込の人にリマインドメールを送ります。よろしいですか？');">
+            <?= csrf_field() ?><input type="hidden" name="kind" value="reminder">
+            <button type="submit" class="button button--small">リマインドを今すぐ送る</button>
+        </form>
+        <form class="inline-form" method="post" action="/admin/events/<?= $id ?>/mails" onsubmit="return confirm('参加した人にお礼メール（アンケート付き）を送ります。よろしいですか？');">
+            <?= csrf_field() ?><input type="hidden" name="kind" value="thanks">
+            <button type="submit" class="button button--small">お礼メールを今すぐ送る</button>
+        </form>
+    </div>
+
+    <h2>アンケート（<?= (int) $survey['count'] ?>件）</h2>
+    <?php if ($survey['count'] === 0): ?>
+        <p class="text-muted">回答はまだありません。お礼メールにアンケートのリンクが入ります。</p>
+    <?php else: ?>
+        <div class="stats">
+            <div class="stat"><div class="stat__label">満足度（5点満点）</div><div class="stat__value"><?= e((string) $survey['average']) ?></div></div>
+            <div class="stat"><div class="stat__label">また参加したい</div><div class="stat__value"><?= (int) $survey['intents']['yes'] ?><span class="text-muted"> / <?= (int) $survey['count'] ?></span></div></div>
+        </div>
+        <?php if ($survey['comments'] !== []): ?>
+            <ul class="list">
+                <?php foreach ($survey['comments'] as $c): ?>
+                    <li class="list__item"><div class="list__main"><div class="list__sub"><?= e($c['customer_name']) ?>・満足度 <?= (int) $c['satisfaction'] ?></div><pre class="plain"><?= e($c['comment']) ?></pre></div></li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    <?php endif; ?>
+</section>
+
+<section class="card">
     <h2>申込者（<?= count($registrations) ?>人）</h2>
     <?php if ($registrations === []): ?>
         <p class="text-muted">まだ申込がありません。</p>
@@ -75,6 +123,7 @@ $prepaidCount = count(array_filter($registrations, fn ($r) => $r['status'] !== '
                                 <a href="/admin/customers/<?= (int) $r['customer_id'] ?>"><?= e($r['customer_name']) ?></a>
                                 <?php if ($r['customer_kana'] !== null): ?><br><span class="text-muted"><?= e($r['customer_kana']) ?></span><?php endif; ?>
                                 <?php if ($r['customer_banned_at'] !== null): ?><span class="badge badge--danger">出禁</span><?php endif; ?>
+                                <?php if (isset($banLabels[$r['ban_check']])): ?><span class="<?= e($banLabels[$r['ban_check']][0]) ?>"><?= e($banLabels[$r['ban_check']][1]) ?></span><?php endif; ?>
                             </td>
                             <td><span class="<?= e(App\Registrations::STATUS_BADGES[$r['status']] ?? 'badge') ?>"><?= e(App\Registrations::STATUSES[$r['status']] ?? $r['status']) ?></span></td>
                             <td class="num"><?= e(yen($r['fee'])) ?></td>

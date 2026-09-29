@@ -45,6 +45,7 @@ Web から見えるのは `public/` だけにする。`.env`（パスワード�
    APP_ENV=production
    APP_DEBUG=false
    APP_URL=https://event.minatocrew.com
+   MAIL_DRIVER=mail
    DB_HOST=（MySQL設定に表示されるホスト名）
    DB_PORT=3306
    DB_NAME=（作った DB 名）
@@ -55,11 +56,18 @@ Web から見えるのは `public/` だけにする。`.env`（パスワード�
 7. **確認**：`https://event.minatocrew.com/` に準備中ページ、`/health` に `{"app":"ok","db":"ok"}` が出ればOK
 8. **管理画面のアカウント**：SSHで `php bin/create-admin.php` を実行し、運営メンバー1人ずつに作る（SSHの `php` のバージョンがサーバーパネルの設定と違う場合があるので、`php -v` で 8.3 か確かめる）
 9. **顧客の移行**：[migration.md](migration.md) の手順で、SSHから `php bin/import-customers.php` を実行する
+10. **メールの差出人**：サーバーパネル「メールアカウント設定」で `noreply@event.minatocrew.com`（または minatocrew.com のアドレス）を作り、管理画面の「設定 → 差出人のメールアドレス」に入れる。自分宛てに1件申し込んで、確認メールが迷惑メールにならず届くか確かめる
+11. **定期実行（前日リマインド・翌日お礼）**：サーバーパネル「Cron設定」で毎時0分に次を実行する（`php` の場所は SSH で `ls /usr/bin/php*` を見て 8.3 のものにする）
+
+   ```
+   /usr/bin/php8.3 /home/<サーバーID>/<ドメイン>/minato-event/bin/send-mails.php
+   ```
 
 ## 本番で気をつけること
 
 - `APP_DEBUG=false` にする（エラー内容を画面に出さない）
-- `APP_URL` を `https://` で始める（ログインのCookieが https でしか送られなくなる）
+- `APP_URL` を `https://` で始める（ログインのCookieが https でしか送られなくなる）。メールに入る個人専用URLもこの値から作るので、正しいドメインにする
+- `MAIL_DRIVER=mail` にする（`log` のままだとメールが送られず `storage/mail/` にファイルとして残る）
 - ログイン失敗の制限はIPごとにもかけている。公開後、`REMOTE_ADDR` が利用者のIPになっているか確かめる（全員が同じIPに見えると、1人の失敗で全員が止まる）
 - `.env` は Git に入れない。パスワードは個人ごとの管理にする
 - データのバックアップは Xserver の自動バックアップに加え、契約終了時の CSV 引き渡しを想定しておく

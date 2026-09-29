@@ -65,6 +65,21 @@ final class Events
         return $stmt->fetch() ?: null;
     }
 
+    public static function findBySlug(string $slug): ?array
+    {
+        $stmt = Database::pdo()->prepare(self::SELECT . ' WHERE e.slug = ?');
+        $stmt->execute([$slug]);
+        return $stmt->fetch() ?: null;
+    }
+
+    /** 掲示板に出す回（募集中と締切。今日以降、近い順） */
+    public static function publicList(): array
+    {
+        return Database::pdo()->query(
+            self::SELECT . " WHERE e.status IN ('open', 'closed') AND e.starts_at >= CURDATE() ORDER BY e.starts_at"
+        )->fetchAll();
+    }
+
     /** これからの回（今日以降。中止・終了は除く） */
     public static function upcoming(int $limit): array
     {

@@ -17,6 +17,16 @@ $rid = (int) $r['id'];
         <dt>状態</dt><dd><span class="<?= e(App\Registrations::STATUS_BADGES[$r['status']] ?? 'badge') ?>"><?= e(App\Registrations::STATUSES[$r['status']] ?? $r['status']) ?></span></dd>
         <dt>申込元</dt><dd><?= e(App\Registrations::SOURCES[$r['source']] ?? $r['source']) ?>　<?= e(fmt_dt($r['applied_at'])) ?></dd>
         <dt>到着</dt><dd><?= $r['arrived_at'] !== null ? e(fmt_dt($r['arrived_at'])) . ($r['paid_amount'] !== null ? '・当日 ' . e(yen($r['paid_amount'])) : '') : '—' ?></dd>
+        <?php if ($r['entry_from'] !== null): ?><dt>窓口</dt><dd><?= e(App\Stats::ENTRY_KEYS[$r['entry_from']] ?? $r['entry_from']) ?></dd><?php endif; ?>
+        <?php if ($r['ban_check'] !== 'none'): ?><dt>出禁チェック</dt><dd><span class="badge badge--<?= $r['ban_check'] === 'confirmed' ? 'danger' : 'warn' ?>"><?= $r['ban_check'] === 'confirmed' ? '連絡先が出禁の人と一致' : '名前が出禁の人と一致（要確認）' ?></span></dd><?php endif; ?>
+        <?php if ($r['consented_at'] !== null): ?><dt>同意</dt><dd>注意事項などに同意（<?= e(fmt_dt($r['consented_at'])) ?>）</dd><?php endif; ?>
+        <?php $answers = $r['answers'] !== null ? json_decode($r['answers'], true) : null; ?>
+        <?php if (is_array($answers) && $answers !== []): ?>
+            <?php $labels = ['referrer' => '紹介者', 'message' => '意気込み', 'questions' => '質問・不安']; ?>
+            <?php foreach ($answers as $key => $value): ?>
+                <dt><?= e($labels[$key] ?? (string) $key) ?></dt><dd><pre class="plain"><?= e(is_scalar($value) ? (string) $value : json_encode($value, JSON_UNESCAPED_UNICODE)) ?></pre></dd>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </dl>
 
     <form method="post" action="/admin/registrations/<?= $rid ?>/edit" class="form" style="margin-top: 16px;">

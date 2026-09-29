@@ -671,3 +671,104 @@ pre.plain {
 .table .actions {
     flex-wrap: nowrap;
 }
+
+/* ── 参加者向け（掲示板・個人ページ） ─────────────── */
+
+.site-header {
+    background: var(--color-navy);
+    color: #ffffff;
+    border-bottom: 3px solid var(--color-orange);
+}
+
+.site-header__inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    align-items: baseline;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 12px 16px;
+}
+
+.site-header__brand {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    text-decoration: none;
+    letter-spacing: 0.04em;
+}
+
+.site-header__sub {
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
+
+.site-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    justify-content: center;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 16px;
+    font-size: 0.85rem;
+}
+
+.admin-header__sub {
+    margin-left: 6px;
+    font-size: 0.8rem;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.req {
+    margin-left: 6px;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #ffffff;
+    background: var(--color-orange);
+    border-radius: 4px;
+    vertical-align: middle;
+}
+
+/* ロボット避けの見えない欄 */
+.hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.ticket {
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-orange);
+    border-radius: 10px;
+}
+
+.ticket__title {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.rating {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.stat-row {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.stat-row:last-child {
+    border-bottom: 0;
+}
+
+.copy-list li {
+    margin-bottom: 4px;
+    overflow-wrap: anywhere;
+}

@@ -7,8 +7,10 @@ namespace App\Admin;
 use App\Auth;
 use App\Events;
 use App\Form;
+use App\Config;
 use App\Registrations;
 use App\Session;
+use App\Surveys;
 use App\View;
 
 /**
@@ -70,6 +72,8 @@ final class EventsController
             'admin' => $admin,
             'event' => $event,
             'registrations' => Registrations::forEvent((int) $event['id']),
+            'survey' => Surveys::summaryForEvent((int) $event['id']),
+            'baseUrl' => rtrim((string) Config::get('APP_URL', ''), '/'),
         ], 'admin/layout');
     }
 

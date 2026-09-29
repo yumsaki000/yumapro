@@ -24,6 +24,57 @@ final class Customers
         return $stmt->fetch() ?: null;
     }
 
+    public static function findByToken(string $token): ?array
+    {
+        if (!preg_match('/\A[0-9a-f]{32}\z/', $token)) {
+            return null;
+        }
+        $stmt = Database::pdo()->prepare('SELECT * FROM customers WHERE access_token = ?');
+        $stmt->execute([$token]);
+        return $stmt->fetch() ?: null;
+    }
+
+    /** 名寄せ：電話番号が同じ人 → メールが同じ人 の順で探す（docs/data-intake.md） */
+    public static function findByPhoneOrEmail(?string $phone, ?string $email): ?array
+    {
+        $pdo = Database::pdo();
+        foreach (['phone' => $phone, 'email' => $email] as $column => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+            $stmt = $pdo->prepare("SELECT * FROM customers WHERE {$column} = ? ORDER BY id LIMIT 1");
+            $stmt->execute([$value]);
+            $found = $stmt->fetch();
+            if ($found) {
+                return $found;
+            }
+        }
+        return null;
+    }
+
+    /** 空いている項目だけ、申込フォームの値で埋める（入っている値は上書きしない） */
+    public static function fillEmpty(int $id, array $values): void
+    {
+        $customer = self::find($id);
+        if ($customer === null) {
+            return;
+        }
+        $sets = [];
+        $params = [];
+        foreach (['name_kana', 'phone', 'email', 'sns_account', 'gender', 'line_name', 'first_channel'] as $column) {
+            $new = $values[$column] ?? null;
+            if (($customer[$column] === null || $customer[$column] === '') && $new !== null && $new !== '') {
+                $sets[] = "{$column} = ?";
+                $params[] = $new;
+            }
+        }
+        if ($sets === []) {
+            return;
+        }
+        $params[] = $id;
+        Database::pdo()->prepare('UPDATE customers SET ' . implode(', ', $sets) . ' WHERE id = ?')->execute($params);
+    }
+
     public static function count(): int
     {
         return (int) Database::pdo()->query('SELECT COUNT(*) FROM customers')->fetchColumn();
