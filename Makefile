@@ -1,6 +1,8 @@
 # よく使うコマンドのまとめ。`make` だけで一覧を表示する
 .DEFAULT_GOAL := help
-.PHONY: help setup up down restart logs db db-reset lint test admin admin-reset import-customers import-banned
+.PHONY: help setup up down restart logs db db-reset lint test admin admin-reset import-customers import-banned \
+	deploy deploy-dry rollback server-ssh server-admin server-admin-reset server-init-db server-db-status server-backup \
+	server-send-mails server-import-customers server-import-banned server-revision
 
 help: ## コマンド一覧
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-18s %s\n", $$1, $$2}'
@@ -48,3 +50,44 @@ import-customers: ## 顧客の移行。LIST=声掛けリストのCSV RESPONSES=�
 
 import-banned: ## 出禁リストの移行。LIST=出禁リストのCSV（書き込むときは COMMIT=1）
 	docker compose exec app php bin/import-banned.php "$(LIST)" $(if $(COMMIT),--commit) $(if $(VERBOSE),--verbose)
+
+# ── 本番（Xserver）：Mac から SSH で。.deploy.env と ~/.ssh/config が要る（docs/deploy-xserver.md） ──
+
+deploy: ## 本番へ反映（チェック → 入れ替え → DBの変更。前の版は控える）
+	bash bin/deploy.sh
+
+deploy-dry: ## 本番へ送るファイルの確認だけ（本番は変えない）
+	bash bin/deploy.sh --dry-run
+
+rollback: ## 本番のコードを1つ前の版に戻す（DBは戻らない）
+	bash bin/server.sh rollback
+
+server-ssh: ## 本番のサーバーに入る
+	bash bin/server.sh ssh
+
+server-admin: ## 本番の管理画面のアカウントを作る
+	bash bin/server.sh admin
+
+server-admin-reset: ## 本番の管理画面のパスワードを再設定する
+	bash bin/server.sh admin-reset
+
+server-init-db: ## 本番の空のDBに最初のテーブルを作る（初回だけ）
+	bash bin/server.sh init-db
+
+server-db-status: ## 本番のDBの変更をどこまで流したか
+	bash bin/server.sh db-status
+
+server-backup: ## 本番のDBのバックアップを取る（サーバーの storage/backups）
+	bash bin/server.sh backup
+
+server-send-mails: ## 本番で前日リマインド・翌日お礼を今すぐ1回送る
+	bash bin/server.sh send-mails
+
+server-import-customers: ## 本番へ顧客を移す。LIST=… RESPONSES=…（書き込むときは COMMIT=1）
+	bash bin/server.sh import-customers "$(LIST)" "$(RESPONSES)" "$(COMMIT)"
+
+server-import-banned: ## 本番へ出禁リストを移す。LIST=…（書き込むときは COMMIT=1）
+	bash bin/server.sh import-banned "$(LIST)" "$(COMMIT)"
+
+server-revision: ## 本番の今の版を見る
+	bash bin/server.sh revision
